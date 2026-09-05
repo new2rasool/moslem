@@ -30,8 +30,10 @@ original has been preserved — and everything now actually works.
 ### 🎬 Video
 - `پخش ویدیو` / `PlayVideo` — play a replied video (with its resolution)
 - `پخش ویدیو @user` — dedicate a video
-- `پخش لینک ویدیو` / `PlayLinkVideo` — play from a direct video URL
-- `پخش یوتیوب` / `YoutubePlay` — play a YouTube link (yt-dlp, direct stream ≤720p)
+- `پخش لینک ویدیو` / `PlayLinkVideo` — play from a video URL (downloaded first,
+  any container — the real resolution is probed before streaming)
+- `پخش یوتیوب` / `YoutubePlay` — play a YouTube link (`watch`, `youtu.be`,
+  `shorts`, `live`, `music.youtube`); downloaded with yt-dlp at ≤720p
 - `سرچ یوتیوب` / `YoutubeSearch` — search YouTube and play the result
 - `توقف ویدیو` / `StopVideo` · `صدای ویدیو` / `VideoSound`
 
@@ -150,8 +152,8 @@ musicrasool/
 | pyrogram | 2.0.106 | MTProto client (bot + helper) |
 | py-tgcalls | 1.2.9 | classic `join_group_call` API (matches original bot) |
 | ntgcalls | 1.1.3 | native WebRTC binding (prebuilt wheels) |
-| yt-dlp | 2026.7.4 | YouTube direct URLs (replaces dead youtube-dl flow) |
-| youtube-search-python | 1.6.6 | `VideosSearch` (YouTube search) |
+| yt-dlp | 2026.7.4 | YouTube download **and** search (`ytsearch`); the primary path for every YouTube command |
+| youtube-search-python | 1.6.6 | optional fallback for YouTube search only |
 | jdatetime | 6.0.1 | Jalali (Persian) timestamps |
 | aiohttp / psutil / screeninfo / deprecation | pinned | py-tgcalls runtime deps |
 
