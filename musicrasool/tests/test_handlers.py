@@ -466,4 +466,4 @@ try:
     os.remove(_bootstrap.HELPER_SESSION)
 except FileNotFoundError:
     pass
-os._exit(0 if all(r[1] for r in results) else 1)
+_bootstrap.finish(0 if all(r[1] for r in results) else 1)

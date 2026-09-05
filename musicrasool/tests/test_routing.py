@@ -326,5 +326,4 @@ if failed:
     print("FAILED:", [r[0] for r in failed])
     sys.exit(1)
 print("=== ROUTING TEST PASSED ===")
-sys.stdout.flush()   # os._exit() below skips the normal buffer flush
-os._exit(0)
+_bootstrap.finish(0)

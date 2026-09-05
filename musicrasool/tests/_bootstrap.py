@@ -87,3 +87,21 @@ def _cleanup():
 
 
 atexit.register(_cleanup)
+
+
+def finish(code=0):
+    """Flush output, remove the temp sandbox, then hard-exit.
+
+    Every test file ends with `os._exit()` on purpose - it avoids a hang in
+    pyrogram's client teardown at interpreter shutdown. But `os._exit()` also
+    skips `atexit` handlers, so the `atexit.register(_cleanup)` above never ran
+    and each run left its ~600 KB sandbox behind in /tmp, accumulating without
+    bound across repeated runs. Call this instead of `os._exit()` directly.
+    """
+    try:
+        sys.stdout.flush()
+        sys.stderr.flush()
+    except Exception:
+        pass
+    _cleanup()
+    os._exit(code)

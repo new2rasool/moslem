@@ -143,4 +143,4 @@ except FileNotFoundError:
 
 print("\n=== SMOKE TEST PASSED ===")
 import os
-os._exit(0)
+_bootstrap.finish(0)
