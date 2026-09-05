@@ -60,15 +60,18 @@ handler never touches the voice chat.
 - A "در حال دانلود ..." status message is shown while large files download.
 - The media duration is recorded (from Telegram metadata / ffprobe) so the
   early-end detector never mistakes a legitimately long song for a failure.
-- Long files are streamed directly from disk by ffmpeg/ntgcalls - there is no
-  hard size limit (server disk space is the only constraint).
+- Long files are streamed directly from disk by ffmpeg/ntgcalls - streaming
+  itself has no size limit (server disk space is the only constraint).
+  Sending a file as a Telegram *message* is a different matter: Telegram caps
+  bot uploads at 50 MB (and remote URLs at 20 MB), which is why `سرچ` and
+  `پخش خودکار` download the track first and then upload the local file.
 - For local files `پخش فایل`/`PlayFile` auto-detects audio vs video and the
   video resolution (ffprobe).
 
 ### 📺 TV & Satellite (پخش تیوی / PlayTv)
 - Iranian national channels: شبکه ۱، ۲، ۳، ۵، خبر، آی‌فیلم، نمایش، نسیم، تماشا، ورزش
 - Satellite channels: BBC, BBC Persian, Manoto, AvaFamily, AvaSeries, FarsiTv, PMC,
-  PMC Royale, Vox 1/2, NavahangMusic, RadioJavan, Iran International, ITN, Gem* (11 channels),
+  PMC Royale, Vox 1/2, NavahangMusic, RadioJavan, Iran International, ITN, Gem* (9 channels),
   MBC Persia, Tapesh 1/2, Persiana, Oxir TV — all live HLS.
 
 ### 📋 Playlist system
@@ -296,20 +299,31 @@ and the full owner/sudo reply-keyboard panel in private.
 ## 🧪 Testing
 
 ```bash
-python tests/run_all.py        # runs the FULL suite: smoke + handlers + auth + layout
+python tests/run_all.py        # runs the FULL suite
 ```
 
 | Test | What it verifies |
 |---|---|
-| `tests/smoke_test.py` | full startup path (`app.run()`), 130+ handlers register, clean shutdown — zero errors |
+| `tests/smoke_test.py` | full startup path (`main.main()`), 144 handlers register in 2 groups, clean shutdown — zero errors |
 | `tests/test_handlers.py` | 31 end-to-end checks driving handlers/callbacks with fakes (charge/install DB writes, player access control, TV streaming, volume, `/play`, `/skip`, local-file playback, auto-reconnect watchdog) |
-| `tests/test_auth.py` | 30 checks on the helper login wizard (phone → code → 2FA, wrong-code retry, `/cancel`, Pyrogram 2.x `sign_in` argument order, signature-adaptive `_do_sign_in`) |
+| `tests/test_auth.py` | 33 checks on the helper login wizard (phone → code → 2FA, wrong-code retry, `/cancel`, Pyrogram 2.x `sign_in` argument order, signature-adaptive `_do_sign_in`, and that the success message names the **helper**, not the bot) |
 | `tests/test_layout.py` | 15 layout-parity checks: every panel/button row and its order matches the original GitHub source exactly |
 | `tests/test_panel_buttons.py` | 42 dispatcher-level checks: every developer-panel button reaches its handler and produces a reply (regression for the "buttons do nothing" bug) |
-| `tests/test_stream_lifecycle.py` | 9 checks: stale stream-end events are dropped, early ends are auto-retried, natural ends leave cleanly, playlists are untouched, watchdog is non-destructive, ntgcalls 1.2.x enums are mapped |
+| `tests/test_stream_lifecycle.py` | 9 checks: stale stream-end events are dropped, early ends are auto-retried, natural ends leave cleanly, playlists are untouched, watchdog is non-destructive, the installed `ntgcalls` status enum is mapped |
+| `tests/test_regressions.py` | 49 checks pinning the fixes from `AUDIT.md`: force-join honours `channel.status`, `پینگ` reaches the helper ping, `backtv` edits in place, `helper_ready()` reflects the real start result, the expiry task advances `status` even when `get_chat` fails, `پاکسازی` keeps playlist files, `PromoteMusic` strips its command word, `بیصدا`/`باصدا` exist, `PlayFile` cannot escape `downloads/`, no shipped credentials |
 
-Each test runs offline and must pass with **zero errors**. The full suite is
-executed twice back-to-back in CI-style runs (`python tests/run_all.py`).
+Each test runs offline and must pass with **zero errors**:
+
+```console
+RESULT: 49/49 regression checks passed
+ALL TESTS PASSED
+```
+
+> **The suite never writes to your project.** `tests/_bootstrap.py` redirects
+> `.env`, `database.sqlite`, `sessions/` and `downloads/` into a temporary
+> directory before any project module is imported, so running the tests on a
+> live host can no longer replace your bot token or wipe your charge/install
+> tables. (It used to — see `AUDIT.md`, finding C1.)
 
 ---
 

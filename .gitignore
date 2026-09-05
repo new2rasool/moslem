@@ -1,0 +1,4 @@
+# scratch extraction of moslem.zip used for the code review (source of truth is musicrasool/)
+extracted/
+__pycache__/
+*.pyc

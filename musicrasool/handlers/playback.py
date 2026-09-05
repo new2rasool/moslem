@@ -13,7 +13,7 @@ import config
 import database
 import i18n
 import utils
-from clients import app, call_py, ubot, helper_session_exists
+from clients import app, call_py, ubot, helper_ready
 from pytgcalls.types.stream.legacy import AudioPiped, AudioVideoPiped
 from pytgcalls.types.raw import VideoParameters
 
@@ -32,7 +32,7 @@ SKIP_EVENT = {}       # chat_id -> asyncio.Event (used by /skip)
 # Shared helpers
 # ----------------------------------------------------------------------
 async def require_helper(uid, m):
-    if not helper_session_exists():
+    if not helper_ready():
         await m.reply(
             i18n.t(
                 uid,
@@ -312,7 +312,7 @@ async def play_dedicate(client, m: Message):
         return await m.reply(i18n.t(uid, "• گروه فاقد اعتبار میباشد !", "• The group has no credit !"))
     if uid not in access:
         return
-    text = m.text
+    text = utils.msg_text(m)
     text = text.replace("پخش", "")
     try:
         text = utils.clean_command(text, "", "Play")
@@ -416,7 +416,7 @@ async def playvideo_dedicate(client, m: Message):
         return await m.reply(i18n.t(uid, "• گروه فاقد اعتبار میباشد !", "• The group has no credit !"))
     if uid not in access:
         return
-    text = m.text.replace("پخش ویدیو", "")
+    text = utils.msg_text(m).replace("پخش ویدیو", "")
     try:
         text = utils.clean_command(text, "", "PlayVideo")
     except Exception:
@@ -614,6 +614,43 @@ async def resume_cmd(client, m: Message):
 
 
 # ----------------------------------------------------------------------
+# Mute / Unmute: بیصدا / باصدا  (silent / unsilent)
+#
+# The help panels (callbacks/help.py) have always documented these four
+# commands, but muting was only reachable through the inline player buttons
+# - there was no text handler at all, so typing them did nothing.
+# ----------------------------------------------------------------------
+@app.on_message(filters.group & (filters.regex(r"^(بیصدا)$") | filters.regex(r"^([Ss][Ii][Ll][Ee][Nn][Tt])$")))
+async def mute_cmd(client, m: Message):
+    uid = m.from_user.id
+    access = [*database.allmusic(), *database.allvideo(), *database.idsudos(), *database.idowner(),
+              *database.creators(m.chat.id), SUDO, OWNER]
+    if uid not in access:
+        return
+    if m.chat.id in PLAYING or m.chat.id in PLAYLIS:
+        try:
+            await call_py.mute_stream(m.chat.id)
+            await m.reply(i18n.t(uid, "__**⌯** پخش بیصدا شد **🔇**__", "__**⌯** Playback muted **🔇**__"))
+        except Exception:
+            await m.reply(i18n.t(uid, "• بیصدا کردن با مشکل مواجه شد !", "• Failed to mute !"))
+
+
+@app.on_message(filters.group & (filters.regex(r"^(باصدا)$") | filters.regex(r"^([Uu][Nn][Ss][Ii][Ll][Ee][Nn][Tt])$")))
+async def unmute_cmd(client, m: Message):
+    uid = m.from_user.id
+    access = [*database.allmusic(), *database.allvideo(), *database.idsudos(), *database.idowner(),
+              *database.creators(m.chat.id), SUDO, OWNER]
+    if uid not in access:
+        return
+    if m.chat.id in PLAYING or m.chat.id in PLAYLIS:
+        try:
+            await call_py.unmute_stream(m.chat.id)
+            await m.reply(i18n.t(uid, "__**⌯** پخش با صدا شد **🔊**__", "__**⌯** Playback unmuted **🔊**__"))
+        except Exception:
+            await m.reply(i18n.t(uid, "• باصدا کردن با مشکل مواجه شد !", "• Failed to unmute !"))
+
+
+# ----------------------------------------------------------------------
 # Volume: صدای موزیک / musicsound & صدای ویدیو / videosound
 # ----------------------------------------------------------------------
 @app.on_message(filters.group & (filters.regex(r"^(صدای موزیک)") | filters.regex(r"^([Mm][Uu][Ss][Ii][Cc][Ss][Oo][Uu][Nn][Dd])")))
@@ -685,14 +722,26 @@ async def search_music(client, m: Message):
     channel_link = ch_rows[0][2] if ch_rows else ""
     mention_music = i18n.t(uid, "🎧 سراسری : جستجوی موزیک 🔍", "🎧 Global : Music search 🔍")
     caption = mention_music if not channel_link else f"[{mention_music}]({channel_link})"
+    local = None
     try:
         if cover:
             await client.send_photo(m.chat.id, cover, caption=i18n.t(uid, "♪ کیفیت آهنگ : 320 📀", "♪ Quality : 320 📀"), reply_to_message_id=m.id)
-        await client.send_audio(m.chat.id, download, caption=caption, reply_to_message_id=m.id)
+        # a bot may only upload-by-URL files up to 20 MB - fetch first, then
+        # upload the local file (limit 50 MB) so long tracks work too
+        local = await utils.fetch_media(download, f"search_{m.chat.id}_{m.id}.mp3")
+        if not local:
+            return await m.reply(i18n.t(uid, "• مشکلی برای دانلود موزیک مورد نظر پیش آمده است !", "• There was a problem downloading the song !"))
+        await client.send_audio(m.chat.id, local, caption=caption, title=utils.melobit_title(info), reply_to_message_id=m.id)
     except MediaEmpty:
         await m.reply(i18n.t(uid, "• مشکلی برای دانلود موزیک مورد نظر پیش آمده است !", "• There was a problem downloading the song !"))
     except Exception:
         await m.reply(i18n.t(uid, "• موزیک مورد نظر یافت نشد !", "• The requested song was not found !"))
+    finally:
+        if local:
+            try:
+                os.remove(local)
+            except OSError:
+                pass
 
 
 # ----------------------------------------------------------------------
@@ -730,33 +779,32 @@ async def autoplay(client, m: Message):
         await mm.delete()
         return await m.reply(i18n.t(uid, "• لینک دانلود یافت نشد !", "• No download link found !"))
     title = utils.melobit_title(info)
-    try:
-        ch_rows = database.channel()
-        channel_link = ch_rows[0][2] if ch_rows else ""
-        mention_music = i18n.t(uid, "🎧 سراسری : پخش خودکار موزیک 🔍", "🎧 Global : Autoplay music 🔍")
-        caption = mention_music if not channel_link else f"[{mention_music}]({channel_link})"
-        mus = await ubot.send_audio("me", download, caption=caption)
-    except MediaEmpty:
-        await mm.delete()
-        return await m.reply(i18n.t(uid, "• مشکلی برای دانلود موزیک مورد نظر پیش آمده است !", "• There was a problem downloading the song !"))
-    except Exception:
-        await mm.delete()
-        return await m.reply(i18n.t(uid, "• موزیک مورد نظر یافت نشد !", "• The requested song was not found !"))
-
-    try:
-        path = await mus.download(file_name=os.path.join(cfg.DOWNLOAD_DIR, f"auto_{m.chat.id}_{uid}_{m.id}.mp3"))
-        await mm.delete()
-        dur = None
+    # Download straight into DOWNLOAD_DIR. This used to bounce the file
+    # through the helper's Saved Messages (`ubot.send_audio("me", url)`) and
+    # then re-download it - which both hit the 20 MB upload-by-URL limit and
+    # leaked the message whenever the second half failed.
+    path = await utils.fetch_media(download, f"auto_{m.chat.id}_{uid}_{m.id}.mp3")
+    if not path:
         try:
-            if mus.audio and mus.audio.duration:
-                dur = mus.audio.duration
+            await mm.delete()
         except Exception:
             pass
+        return await m.reply(i18n.t(uid, "• مشکلی برای دانلود موزیک مورد نظر پیش آمده است !", "• There was a problem downloading the song !"))
+
+    try:
+        try:
+            await mm.delete()
+        except Exception:
+            pass
+        dur = await utils.probe_duration(path)
         print("Playing {} in {}".format(path, m.chat.title))
         await play_audio(client, m, path, title, duration=dur)
-        await mus.delete()
-    except Exception:
-        await mm.delete()
+    except Exception as exc:
+        print(exc)
+        try:
+            await mm.delete()
+        except Exception:
+            pass
 
 
 # ----------------------------------------------------------------------
@@ -781,8 +829,13 @@ async def youtube_search(client, m: Message):
         return
     try:
         from youtubesearchpython import VideosSearch
-        search = VideosSearch(query, limit=1)
-        result = search.result()["result"]
+
+        # `.result()` performs a blocking HTTP request - running it directly
+        # stalls the whole event loop (every other chat freezes too).
+        def _search():
+            return VideosSearch(query, limit=1).result()["result"]
+
+        result = await asyncio.to_thread(_search)
         if not result:
             return await m.reply(i18n.t(uid, "• ویدیویی یافت نشد !", "• No video found !"))
         link = result[0]["link"]
@@ -1300,10 +1353,35 @@ async def play_file_cmd(client, m: Message):
     await _play_local_file(client, m, arg)
 
 
+def _resolve_local_media(path: str):
+    """Resolve a user-supplied path and confine it to DOWNLOAD_DIR.
+
+    `_play_local_file` used to accept any path on the host, so `PlayFile
+    /etc/passwd` (or `../../`) streamed an arbitrary server file into the
+    voice chat. Returns the safe absolute path, or None if it escapes.
+    """
+    root = os.path.realpath(cfg.DOWNLOAD_DIR)
+    candidate = path if os.path.isabs(path) else os.path.join(root, path)
+    target = os.path.realpath(candidate)
+    if target != root and not target.startswith(root + os.sep):
+        return None
+    return target
+
+
 async def _play_local_file(client, m: Message, path: str):
     """Play a local file - audio or video is auto-detected by extension."""
     uid = m.from_user.id
-    if not os.path.exists(path):
+    safe = _resolve_local_media(path)
+    if safe is None:
+        return await m.reply(
+            i18n.t(
+                uid,
+                "• این مسیر مجاز نیست **!** فقط فایل های داخل پوشه ی `downloads` قابل پخش هستند.",
+                "• That path is not allowed **!** Only files inside the `downloads` folder can be played.",
+            )
+        )
+    path = safe
+    if not os.path.isfile(path):
         return await m.reply(
             i18n.t(uid, "• فایل در مسیر مشخص شده یافت نشد !", "• The file was not found at the given path !")
         )

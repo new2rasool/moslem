@@ -9,7 +9,7 @@ import config
 import database
 import i18n
 import utils
-from clients import app, call_py, helper_session_exists
+from clients import app, call_py, helper_ready
 from pytgcalls.types.stream.legacy import AudioVideoPiped
 
 cfg = config.get_config()
@@ -61,6 +61,10 @@ CHANNELS = {
 }
 
 
+# keys of the national (telev) list - everything else in CHANNELS is satellite
+NATIONAL = {"tv1", "tv2", "tv3", "tv5", "news", "ifilm", "namayesh", "nasim", "hdtest", "varzesh"}
+
+
 def _tv_access(chat_id):
     return [*database.idsudos(), *database.idowner(), OWNER, SUDO, *database.creators(chat_id),
             *database.idvideo(chat_id), *database.allvideo()]
@@ -94,17 +98,12 @@ async def handle_tv(client, m: CallbackQuery, data: str):
 
     if data == "backtv":
         # back to the telev (national) list
-        try:
-            await m.message.delete()
-        except Exception:
-            pass
-        try:
-            await m.message.reply(
-                i18n.t(uid, "• جهت پخش، یکی از شبکه های زیر را انتخاب کنید :", "• Choose a channel to play :"),
-                reply_markup=utils.tv_ir_keyboard(uid),
-            )
-        except Exception:
-            pass
+        # Edit the message in place: deleting it first and then replying to it
+        # fails with "message to reply not found", so the panel just vanished.
+        await m.edit_message_text(
+            i18n.t(uid, "• جهت پخش، یکی از شبکه های زیر را انتخاب کنید :", "• Choose a channel to play :"),
+            reply_markup=utils.tv_ir_keyboard(uid),
+        )
         return True
 
     if data == "backahura":
@@ -123,7 +122,7 @@ async def handle_tv(client, m: CallbackQuery, data: str):
 
     if data in CHANNELS:
         name, path = CHANNELS[data]
-        if not helper_session_exists():
+        if not helper_ready():
             await m.answer(i18n.t(uid, "• حساب هلپر وارد نشده است !", "• The helper account is not logged in !"), show_alert=True)
             return True
         try:
@@ -157,7 +156,13 @@ async def handle_tv(client, m: CallbackQuery, data: str):
             client, chat_id, uid, fa, en,
             reply_markup=InlineKeyboardMarkup(
                 [
-                    [InlineKeyboardButton(i18n.t(uid, "• بازگشت", "• Back"), callback_data="backtv"),
+                    # `backtv` returns to the national list, `backma` to the
+                    # satellite list. The button used to be hard-coded to
+                    # `backtv`, so leaving a satellite channel dropped the
+                    # user into the wrong panel (and `backma` was dead code).
+                    [InlineKeyboardButton(
+                        i18n.t(uid, "• بازگشت", "• Back"),
+                        callback_data="backtv" if data in NATIONAL else "backma"),
                      InlineKeyboardButton(i18n.t(uid, "• توقف", "• Stop"), callback_data="closee")],
                 ]
             ),

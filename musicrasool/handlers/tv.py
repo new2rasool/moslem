@@ -9,8 +9,7 @@ import config
 import database
 import i18n
 import utils
-from clients import app, call_py, helper_session_exists
-from pytgcalls.types.stream.legacy import AudioVideoPiped
+from clients import app, call_py
 
 cfg = config.get_config()
 OWNER = cfg.OWNER_ID

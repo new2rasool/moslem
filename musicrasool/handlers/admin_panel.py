@@ -7,7 +7,6 @@ import time
 
 from pyrogram import filters
 from pyrogram.types import Message
-from pyrogram.errors.exceptions.bad_request_400 import MessageEmpty
 
 import config
 import convo
@@ -45,7 +44,7 @@ async def vaziat(client, m: Message):
     left = "تعریف نشده" if left_rows == [] else ("فعال" if int(left_rows[0][0]) == 1 else "غیرفعال")
 
     ch_rows = database.channel()
-    chan = "تعریف نشده" if ch_rows == [] else ("فعال" if int(ch_rows[0][3]) == 1 else "غیرفعال")
+    chan = "تعریف نشده" if ch_rows == [] else ("فعال" if int(ch_rows[0][3] or 0) == 1 else "غیرفعال")
 
     fa = (
         f"◄ وضعیت و آمار ربات :\n\n"
@@ -222,7 +221,9 @@ async def join_on(client, m: Message):
     ch_rows = database.channel()
     if ch_rows == [] or ch_rows[0][0] is None:
         return await m.reply(i18n.t(uid, "• لطفا ابتدا یک کانال برای این بخش تنظیم کنید !", "• Please set a channel first !"))
-    database.execute("UPDATE channel SET status=1")
+    # scope the update to the configured channel row (the panel only ever
+    # manages a single row, but an unscoped UPDATE would flip every row)
+    database.execute("UPDATE channel SET status=1 WHERE idchannel=?", (ch_rows[0][0],))
     await m.reply(i18n.t(uid, "• اجبار ورود فعال شد !", "• Force-join enabled !"))
 
 
@@ -232,14 +233,16 @@ async def join_off(client, m: Message):
     ch_rows = database.channel()
     if ch_rows == [] or ch_rows[0][0] is None:
         return await m.reply(i18n.t(uid, "• لطفا ابتدا یک کانال برای این بخش تنظیم کنید !", "• Please set a channel first !"))
-    database.execute("UPDATE channel SET status=0")
+    database.execute("UPDATE channel SET status=0 WHERE idchannel=?", (ch_rows[0][0],))
     await m.reply(i18n.t(uid, "• اجبار ورود غیرفعال شد !", "• Force-join disabled !"))
 
 
 # ----------------------------------------------------------------------
 # Group list helpers
 # ----------------------------------------------------------------------
-def _fmt_charge_list(rows, unit_day: bool):
+def _fmt_charge_list(rows, unit_day: bool, uid=None):
+    # `i18n.lang_of(0)` was used here, and lang_of() returns "fa" for any
+    # falsy user id - so the unit was always Persian, even for EN users.
     charlist = ""
     count = 0
     for i in rows:
@@ -247,10 +250,10 @@ def _fmt_charge_list(rows, unit_day: bool):
         remaining = int(i[4] - time.time())
         if unit_day:
             remaining = int(remaining / 60 / 60 / 24)
-            unit = "روز" if i18n.lang_of(0) == "fa" else "days"
+            unit = i18n.t(uid, "روز", "days")
         else:
             remaining = int(remaining / 60 / 60)
-            unit = "ساعت" if i18n.lang_of(0) == "fa" else "hours"
+            unit = i18n.t(uid, "ساعت", "hours")
         charlist += (
             f"{count} - {i[7]}\n"
             f"◂ شناسه گروه : `{i[0]}`\n"
@@ -264,20 +267,35 @@ def _fmt_charge_list(rows, unit_day: bool):
 async def _send_chunked(client, m, text, empty_msg):
     if not text.strip():
         return await m.reply(empty_msg)
-    # split into <=4000 chunks
-    chunks = [text[i:i + 4000] for i in range(0, len(text), 4000)]
+    # Telegram caps a message at 4096 chars. Cutting at exactly 4000 could
+    # split a Markdown token in half (unbalanced ** or a broken `), which made
+    # Telegram reject the chunk - and only MessageEmpty was caught. Split on
+    # line boundaries instead and tolerate any send failure.
+    limit = 4000
+    chunks, buf = [], ""
+    for line in text.split("\n"):
+        while len(line) > limit:                     # single very long line
+            chunks.append(line[:limit])
+            line = line[limit:]
+        if len(buf) + len(line) + 1 > limit:
+            chunks.append(buf)
+            buf = line
+        else:
+            buf = f"{buf}\n{line}" if buf else line
+    if buf:
+        chunks.append(buf)
     for c in chunks:
         try:
             await m.reply(c, disable_web_page_preview=True)
-        except MessageEmpty:
-            pass
+        except Exception as exc:
+            print(f"_send_chunked: failed to send a chunk: {exc}")
 
 
 @app.on_message(filters.private & filters.user([OWNER, SUDO]) & filters.regex(r"^📋 لیست گروه های فعال موزیک$"))
 async def list_music_active(client, m: Message):
     uid = m.from_user.id
     rows = database.query("SELECT * FROM charge WHERE status=0")
-    text = _fmt_charge_list(rows, unit_day=True)
+    text = _fmt_charge_list(rows, unit_day=True, uid=uid)
     await _send_chunked(client, m, text, i18n.t(uid, "• در حال حاضر گروه فعالی ثبت نشده است !", "• No active groups registered !"))
 
 
@@ -285,7 +303,7 @@ async def list_music_active(client, m: Message):
 async def list_music_renew(client, m: Message):
     uid = m.from_user.id
     rows = database.query("SELECT * FROM charge WHERE status=1")
-    text = _fmt_charge_list(rows, unit_day=False)
+    text = _fmt_charge_list(rows, unit_day=False, uid=uid)
     await _send_chunked(client, m, text, i18n.t(uid, "• در حال حاضر گروه تمدیدی ثبت نشده است !", "• No groups to renew !"))
 
 
@@ -293,7 +311,7 @@ async def list_music_renew(client, m: Message):
 async def list_video_active(client, m: Message):
     uid = m.from_user.id
     rows = database.query("SELECT * FROM charge2 WHERE status=0")
-    text = _fmt_charge_list(rows, unit_day=True)
+    text = _fmt_charge_list(rows, unit_day=True, uid=uid)
     await _send_chunked(client, m, text, i18n.t(uid, "• در حال حاضر گروه فعالی ثبت نشده است !", "• No active groups registered !"))
 
 
@@ -301,7 +319,7 @@ async def list_video_active(client, m: Message):
 async def list_video_renew(client, m: Message):
     uid = m.from_user.id
     rows = database.query("SELECT * FROM charge2 WHERE status=1")
-    text = _fmt_charge_list(rows, unit_day=False)
+    text = _fmt_charge_list(rows, unit_day=False, uid=uid)
     await _send_chunked(client, m, text, i18n.t(uid, "• در حال حاضر گروه تمدیدی ثبت نشده است !", "• No groups to renew !"))
 
 
@@ -767,7 +785,7 @@ async def invoice(client, m: Message):
 @app.on_message(filters.private & filters.user(OWNER) & filters.regex(r"^(تنظیم اعتبار)"))
 async def set_credit(client, m: Message):
     uid = m.from_user.id
-    text = m.text.replace("تنظیم اعتبار", "").strip()
+    text = utils.msg_text(m).replace("تنظیم اعتبار", "").strip()
     try:
         days = int(text)
     except ValueError:
@@ -782,7 +800,7 @@ async def set_credit(client, m: Message):
 @app.on_message(filters.private & filters.user(OWNER) & filters.regex(r"^(اپدیت اعتبار)"))
 async def update_credit(client, m: Message):
     uid = m.from_user.id
-    text = m.text.replace("اپدیت اعتبار", "").strip()
+    text = utils.msg_text(m).replace("اپدیت اعتبار", "").strip()
     try:
         days = int(text)
     except ValueError:

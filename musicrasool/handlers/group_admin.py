@@ -248,7 +248,10 @@ async def promotemusic_arg(client, m: Message):
     uid = m.from_user.id
     if not _music_installed(m.chat.id) or not _creator(m.chat.id, uid):
         return
-    text = utils.clean_command(m.text, "ترفیع موزیک", "PromotMusic").lstrip("@")
+    # the English name must match the regex above (`PromoteMusic`) - it was
+    # misspelled `PromotMusic`, so the command word was never stripped and
+    # `resolve_chat("PromoteMusic @user")` always failed with "User not found".
+    text = utils.clean_command(m.text, "ترفیع موزیک", "PromoteMusic").lstrip("@")
     req = await utils.resolve_chat(text)
     if req is None:
         return await m.reply(i18n.t(uid, "کاربر یافت نشد !", "User not found !"))
@@ -658,7 +661,7 @@ async def charge_video_private(client, m: Message):
     uid = m.from_user.id
     if not _sudo(uid):
         return
-    text = m.text
+    text = utils.msg_text(m)
     for p in ("تنظیم شارژ ویدیو", "آپدیت شارژ ویدیو", "اپدیت شارژ ویدیو"):
         text = text.replace(p, "")
     parts = text.split()
@@ -681,7 +684,7 @@ async def charge_video_group(client, m: Message):
     uid = m.from_user.id
     if not _sudo(uid):
         return
-    text = m.text
+    text = utils.msg_text(m)
     for p in ("تنظیم شارژ ویدیو", "آپدیت شارژ ویدیو", "اپدیت شارژ ویدیو"):
         text = text.replace(p, "")
     text = text.strip()
@@ -701,7 +704,7 @@ async def charge_music_private(client, m: Message):
     uid = m.from_user.id
     if not _sudo(uid):
         return
-    text = m.text
+    text = utils.msg_text(m)
     for p in ("تنظیم شارژ", "آپدیت شارژ", "اپدیت شارژ"):
         text = text.replace(p, "")
     parts = text.split()
@@ -723,7 +726,7 @@ async def charge_music_group(client, m: Message):
     uid = m.from_user.id
     if not _sudo(uid):
         return
-    text = m.text
+    text = utils.msg_text(m)
     for p in ("تنظیم شارژ", "آپدیت شارژ", "اپدیت شارژ"):
         text = text.replace(p, "")
     text = text.strip()
@@ -745,6 +748,10 @@ async def group_credit(client, m: Message):
     uid = m.from_user.id
     admins = []
     async for member in client.get_chat_members(m.chat.id, filter=enums.ChatMembersFilter.ADMINISTRATORS):
+        # anonymous/channel admins can arrive with user=None (see the same
+        # guard in addmusicadmins / addvideoadmins)
+        if member.user is None:
+            continue
         admins.append(member.user.id)
     admins.extend(database.idsudos())
     admins.extend([OWNER, SUDO])
@@ -843,7 +850,7 @@ async def leave_private(client, m: Message):
     uid = m.from_user.id
     if uid not in (OWNER, SUDO, *database.idsudos()):
         return
-    text = m.text.replace("خروج ", "").replace("-100", "").strip()
+    text = utils.msg_text(m).replace("خروج ", "").replace("-100", "").strip()
     try:
         gid = int("-100" + text)
     except ValueError:
@@ -851,8 +858,8 @@ async def leave_private(client, m: Message):
     try:
         await app.send_message(gid, i18n.t(uid, "**⌯** ربات از این گروه خارج میشود **!**", "**⌯** The bot is leaving this group **!**"))
         await app.leave_chat(gid)
-        from clients import ubot, helper_session_exists
-        if helper_session_exists():
+        from clients import ubot, helper_ready
+        if helper_ready():
             try:
                 await ubot.leave_chat(gid)
             except Exception:
@@ -869,8 +876,8 @@ async def leave_group(client, m: Message):
         return
     await m.reply(i18n.t(uid, "**⌯** ربات از این گروه خارج میشود **!**", "**⌯** The bot is leaving this group **!**"))
     await app.leave_chat(m.chat.id)
-    from clients import helper_session_exists
-    if helper_session_exists():
+    from clients import helper_ready
+    if helper_ready():
         try:
             from clients import ubot
             await ubot.leave_chat(m.chat.id)
@@ -893,8 +900,8 @@ async def start_voice_call(client, m: Message):
     installed = [*database.insmusic(), *database.insvideo()]
     if m.chat.id not in installed:
         return
-    from clients import ubot, helper_session_exists
-    if not helper_session_exists():
+    from clients import ubot, helper_ready
+    if not helper_ready():
         return await m.reply(i18n.t(uid, "• حساب هلپر وارد نشده است ! لطفا ابتدا /login را انجام دهید.", "• The helper account is not logged in ! Please run /login first."))
     try:
         from pyrogram.raw.functions.phone import CreateGroupCall
@@ -992,13 +999,57 @@ async def clear_downloads(client, m: Message):
     uid = m.from_user.id
     import shutil
     try:
+        # `downloads/<chat_id>/<title>.mp3` files are referenced by the
+        # `playlist` table (add_to_playlist). Deleting them used to leave the
+        # DB rows behind, so پخش لیست silently skipped every single track.
+        # Only remove files that nothing references any more.
+        keep = {os.path.abspath(r[0]) for r in database.query("SELECT path FROM playlist") if r[0]}
+
+        removed = kept = 0
         for f in os.listdir(cfg.DOWNLOAD_DIR):
             p = os.path.join(cfg.DOWNLOAD_DIR, f)
             if os.path.isfile(p):
-                os.remove(p)
+                if os.path.abspath(p) in keep:
+                    kept += 1
+                else:
+                    os.remove(p)
+                    removed += 1
             else:
-                shutil.rmtree(p, ignore_errors=True)
-        await m.reply(i18n.t(uid, "**⌯** پوشه ی \"downloads\" با موفقیت پاکسازی شد **!**", "**⌯** The \"downloads\" folder was cleaned **!**"))
+                # walk the sub-folder and keep referenced files in place
+                for root, _dirs, files in os.walk(p, topdown=False):
+                    for name in files:
+                        fp = os.path.join(root, name)
+                        if os.path.abspath(fp) in keep:
+                            kept += 1
+                            continue
+                        try:
+                            os.remove(fp)
+                            removed += 1
+                        except OSError:
+                            pass
+                    # drop the directory itself once it is empty
+                    try:
+                        os.rmdir(root)
+                    except OSError:
+                        pass
+
+        if kept:
+            msg_fa = (
+                f"**⌯** پوشه ی \"downloads\" پاکسازی شد **!**\n"
+                f"**⊹** حذف شد : {removed} فایل\n"
+                f"**⊹** نگه داشته شد : {kept} فایل (عضو لیست پخش)\n"
+                f"**⊹** برای حذف آن ها ابتدا `پاکسازی لیست پخش` را در گروه مربوطه بزنید."
+            )
+            msg_en = (
+                f"**⌯** The \"downloads\" folder was cleaned **!**\n"
+                f"**⊹** Removed : {removed} file(s)\n"
+                f"**⊹** Kept : {kept} file(s) (part of a playlist)\n"
+                f"**⊹** To remove those, run `cleanplaylist` in the group first."
+            )
+        else:
+            msg_fa = f"**⌯** پوشه ی \"downloads\" با موفقیت پاکسازی شد **!** ({removed} فایل)"
+            msg_en = f"**⌯** The \"downloads\" folder was cleaned **!** ({removed} file(s))"
+        await m.reply(i18n.t(uid, msg_fa, msg_en))
     except Exception:
         await m.reply(i18n.t(uid, "• پاکسازی با مشکل مواجه شد !", "• Cleaning failed !"))
 

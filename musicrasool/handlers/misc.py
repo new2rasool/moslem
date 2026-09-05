@@ -52,13 +52,17 @@ async def ping_cmd(client, m: Message):
     await am.edit(i18n.t(uid, f"**⋆ ربات هم اکنون آنلاین میباشد !**\n◍ زمان های سپری شده **:**\n↓ دریافت ·۰• {recive} ثانیه", f"**⋆ The bot is online now !**\n◍ Elapsed times **:**\n↓ Receive ·۰• {recive}s"))
     await asyncio.sleep(0.2)
     await am.edit(i18n.t(uid, f"**⋆ ربات هم اکنون آنلاین میباشد !**\n◍ زمان های سپری شده **:**\n↓ دریافت ·۰• {recive} ثانیه\n↑ ارسال ·۰•  {send} ثانیه", f"**⋆ The bot is online now !**\n◍ Elapsed times **:**\n↓ Receive ·۰• {recive}s\n↑ Send ·۰•  {send}s"))
+    # `helper_ping` below matches the very same filters and lives in the same
+    # handler group. Without this the dispatcher stops after the first match
+    # and the helper ping could never be reached.
+    m.continue_propagation()
 
 
 @app.on_message(filters.group & filters.user([SUDO, OWNER]) & (filters.regex(r"^(پینگ)$") | filters.regex(r"^([Pp][Ii][Nn][Gg])$")))
 async def helper_ping(client, m: Message):
     uid = m.from_user.id
-    from clients import ubot, helper_session_exists
-    if not helper_session_exists():
+    from clients import ubot, helper_ready
+    if not helper_ready():
         return
     import asyncio
     send = random.choice([0.8, 0.2, 0.03, 0.026, 0.142, 0.68, 0.092, 0.099, 0.6, 0.4, 0.02, 0.09])
@@ -122,7 +126,8 @@ async def set_reply_media(client, m: Message):
         else:
             await m.reply(i18n.t(uid, "• لطفا به یک تصویر یا ویدیو ریپلای کنید !", "• Please reply to a photo or a video !"))
     except Exception as exc:
-        await m.reply(i18n.t(uid, f"• خطا : `{exc}`", f"• Error : `{exc}`"))
+        print(f"set reply media failed: {exc!r}")
+        await m.reply(i18n.t(uid, f"• خطا : `{utils.brief_error(exc)}`", f"• Error : `{utils.brief_error(exc)}`"))
 
 
 # ----------------------------------------------------------------------

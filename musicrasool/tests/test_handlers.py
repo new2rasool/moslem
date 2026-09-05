@@ -10,19 +10,15 @@ from types import SimpleNamespace
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
-os.chdir(PROJECT_ROOT)
 
-with open(".env", "w", encoding="utf-8") as f:
-    f.write("API_ID=1234567\nAPI_HASH=0123456789abcdef0123456789abcdef\n")
-    f.write("BOT_TOKEN=123456:TESTTOKEN\nOWNER_ID=6173234874\nSUDO_ID=6173234874\n")
-    f.write("DEFAULT_LANG=fa\nDOWNLOAD_DIR=downloads\n")
+import _bootstrap  # noqa: F401  (redirects .env/DB/downloads into a temp sandbox)
 
 import config  # noqa: E402
 import database  # noqa: E402
 
 config.load_config()
 database.init_db()
-open("sessions/helper.session", "w").close()
+_bootstrap.make_helper_session()
 
 import handlers.private  # noqa: E402,F401
 import handlers.admin_panel  # noqa: E402,F401
@@ -467,7 +463,7 @@ if __name__ == "__main__":
     asyncio.run(main())
     import os
 try:
-    os.remove(os.path.join(PROJECT_ROOT, "sessions", "helper.session"))
+    os.remove(_bootstrap.HELPER_SESSION)
 except FileNotFoundError:
     pass
 os._exit(0 if all(r[1] for r in results) else 1)

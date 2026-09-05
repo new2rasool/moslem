@@ -125,14 +125,19 @@ fi
 if [ "$FFMPEG_FALLBACK" = "1" ]; then
     echo -e "${GREEN}  Installing static ffmpeg fallback ...${NC}"
     pip install -q imageio-ffmpeg==0.4.9
-    FFMPEG_BIN_DIR="$(python -c 'import os,imageio_ffmpeg;print(os.path.dirname(imageio_ffmpeg.get_ffmpeg_exe()))')"
-    if [ -n "$FFMPEG_BIN_DIR" ]; then
-        ln -sf "$FFMPEG_BIN_DIR/ffmpeg-linux-x86_64-v7.0.2" venv/bin/ffmpeg 2>/dev/null || true
+    # Ask the package where its binary actually is - the file name changes
+    # between imageio-ffmpeg releases (e.g. ffmpeg-linux64-v4.2.2), so it
+    # must not be hard-coded.
+    FFMPEG_BIN="$(python -c 'import imageio_ffmpeg;print(imageio_ffmpeg.get_ffmpeg_exe())' 2>/dev/null)"
+    if [ -n "$FFMPEG_BIN" ] && [ -f "$FFMPEG_BIN" ]; then
+        chmod +x "$FFMPEG_BIN" 2>/dev/null || true
+        ln -sf "$FFMPEG_BIN" venv/bin/ffmpeg 2>/dev/null || true
     fi
     if command -v ffmpeg >/dev/null 2>&1 || [ -x "venv/bin/ffmpeg" ]; then
         echo -e "${GREEN}  ffmpeg is now available.${NC}"
     else
         echo -e "${YELLOW}  Could not wire ffmpeg - please install it manually.${NC}"
+        echo -e "${YELLOW}  (imageio_ffmpeg.get_ffmpeg_exe() is also used at runtime as a fallback)${NC}"
     fi
 fi
 
@@ -156,8 +161,23 @@ else
     [ -z "$SUDO_ID_IN" ] && SUDO_ID_IN="$OWNER_ID_IN"
 
     if [ -z "$API_ID_IN" ] || [ -z "$API_HASH_IN" ] || [ -z "$BOT_TOKEN_IN" ] || [ -z "$OWNER_ID_IN" ]; then
-        echo -e "${RED}  Incomplete input - creating .env from .env.example instead.${NC}"
-        cp .env.example .env
+        # Never copy .env.example: an unedited copy would start the bot with
+        # placeholder credentials. Write a clearly-marked .env instead and
+        # stop, so the operator must fill it in.
+        echo -e "${RED}  Incomplete input - .env written with PLACEHOLDER values.${NC}"
+        echo -e "${YELLOW}  The bot will refuse to start until you fill them in.${NC}"
+        cat > .env <<EOF
+# MusicRasool configuration - INCOMPLETE, fill in the values marked below
+API_ID=${API_ID_IN:-PUT_YOUR_API_ID_HERE}
+API_HASH=${API_HASH_IN:-PUT_YOUR_API_HASH_HERE}
+BOT_TOKEN=${BOT_TOKEN_IN:-PUT_YOUR_BOT_TOKEN_HERE}
+OWNER_ID=${OWNER_ID_IN:-PUT_YOUR_NUMERIC_USER_ID_HERE}
+SUDO_ID=${SUDO_ID_IN}
+DEFAULT_LANG=fa
+DOWNLOAD_DIR=downloads
+MELOBIT_API=https://api.melobit.com/v1
+EOF
+        :  # placeholders written - detected again in step 6
     else
         cat > .env <<EOF
 # MusicRasool configuration
@@ -171,6 +191,7 @@ DOWNLOAD_DIR=downloads
 MELOBIT_API=https://api.melobit.com/v1
 EOF
         echo -e "${GREEN}  .env written.${NC}"
+
     fi
 fi
 
@@ -179,6 +200,15 @@ fi
 # ------------------------------------------------------------
 echo -e "${GREEN}[6/6] Setup complete.${NC}"
 echo -e "${CYAN}============================================${NC}"
+
+# Refuse to advertise "just run it" if the credentials are still placeholders.
+if grep -q "PUT_YOUR_.*_HERE" .env 2>/dev/null; then
+    echo -e "${RED}.env still contains PLACEHOLDER values - the bot will not start.${NC}"
+    echo -e "${YELLOW}Edit .env and set API_ID, API_HASH, BOT_TOKEN and OWNER_ID.${NC}"
+    echo -e "${CYAN}============================================${NC}"
+    exit 1
+fi
+
 echo -e "${GREEN}Next steps:${NC}"
 echo -e "  1. Run the bot:"
 echo -e "     ${CYAN}./run.sh${NC}     (or: ${CYAN}source venv/bin/activate && python run.py${NC})"

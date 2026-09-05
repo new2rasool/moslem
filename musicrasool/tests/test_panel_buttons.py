@@ -31,12 +31,8 @@ import pyrogram
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
-os.chdir(PROJECT_ROOT)
 
-with open(".env", "w", encoding="utf-8") as f:
-    f.write("API_ID=1234567\nAPI_HASH=0123456789abcdef0123456789abcdef\n")
-    f.write("BOT_TOKEN=123456:TESTTOKEN\nOWNER_ID=6173234874\nSUDO_ID=6173234874\n")
-    f.write("DEFAULT_LANG=fa\nDOWNLOAD_DIR=downloads\n")
+import _bootstrap  # noqa: F401  (redirects .env/DB/downloads into a temp sandbox)
 
 # ---- create + set the event loop BEFORE imports (handler registration) ----
 loop = asyncio.new_event_loop()

@@ -89,6 +89,34 @@ except Exception:
 
 HELPER_SESSION = os.path.join(SESSION_DIR, "helper.session")
 
+# Runtime state of the helper account, set by main() after the start attempt:
+#   None  -> not attempted yet in this process (tests / before main.run())
+#   True  -> ubot + PyTgCalls started successfully
+#   False -> a session file exists but starting it FAILED (expired/invalid
+#            session, revoked account, network, ...). The file is still on
+#            disk, so `helper_session_exists()` alone cannot tell the
+#            difference - every play path used to pass its check and then
+#            blow up deep inside PyTgCalls with an opaque error.
+HELPER_ONLINE = None
+
+
+def set_helper_online(state: bool):
+    """Record the outcome of the helper start attempt (called by main())."""
+    global HELPER_ONLINE
+    HELPER_ONLINE = bool(state)
+
 
 def helper_session_exists() -> bool:
+    """Is there a `sessions/helper.session` file? (informational)"""
     return os.path.exists(HELPER_SESSION)
+
+
+def helper_ready() -> bool:
+    """Can the helper actually stream right now?
+
+    Use this to gate play / voice-chat code paths instead of
+    `helper_session_exists()`, which only proves that a file is on disk.
+    """
+    if not helper_session_exists():
+        return False
+    return HELPER_ONLINE is not False

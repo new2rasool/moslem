@@ -10,17 +10,9 @@ import sys
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
-os.chdir(PROJECT_ROOT)
 
 # ---- fake .env -----------------------------------------------------
-with open(".env", "w", encoding="utf-8") as f:
-    f.write("API_ID=1234567\n")
-    f.write("API_HASH=0123456789abcdef0123456789abcdef\n")
-    f.write("BOT_TOKEN=123456:TESTTOKEN\n")
-    f.write("OWNER_ID=6173234874\n")
-    f.write("SUDO_ID=6173234874\n")
-    f.write("DEFAULT_LANG=fa\n")
-    f.write("DOWNLOAD_DIR=downloads\n")
+import _bootstrap  # noqa: F401  (redirects .env/DB/downloads into a temp sandbox)
 
 import pyrogram  # noqa: E402
 
@@ -145,7 +137,7 @@ print("[OK] all keyboards built")
 
 import os as _os
 try:
-    _os.remove(_os.path.join(PROJECT_ROOT, "sessions", "helper.session"))
+    _os.remove(_bootstrap.HELPER_SESSION)
 except FileNotFoundError:
     pass
 

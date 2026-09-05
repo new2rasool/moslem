@@ -11,7 +11,7 @@ import config
 import database
 import i18n
 import utils
-from clients import app, call_py, ubot, helper_session_exists
+from clients import app, call_py, ubot, helper_ready
 
 cfg = config.get_config()
 OWNER = cfg.OWNER_ID
@@ -281,7 +281,7 @@ async def handle_panel(client, m: CallbackQuery, data: str):
     if data == "addcli":
         if database.query("SELECT idgp FROM gp WHERE idgp=?", (chat_id,)) == []:
             return await m.edit_message_text(i18n.t(uid, "• لطفا ابتدا گروه را نصب کنید !", "• Please install the group first !"))
-        if not helper_session_exists():
+        if not helper_ready():
             return await m.edit_message_text(i18n.t(uid, "• حساب هلپر وارد نشده است ! لطفا ابتدا /login را انجام دهید.", "• The helper account is not logged in ! Please run /login first."))
         try:
             await ubot.send_message(chat_id, i18n.t(uid, "• ربات هلپر عضو گروه میباشد !", "• The helper bot is already a member of the group !"))
@@ -357,7 +357,7 @@ async def handle_panel(client, m: CallbackQuery, data: str):
         except Exception:
             pass
         await app.leave_chat(chat_id)
-        if helper_session_exists():
+        if helper_ready():
             try:
                 await ubot.leave_chat(chat_id)
             except Exception:

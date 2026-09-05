@@ -11,10 +11,30 @@ FA = "fa"
 EN = "en"
 
 # ----------------------------------------------------------------------
+# Resolved language per user.
+#
+# `lang_of()` falls back to `config.get_config().DEFAULT_LANG`, which reads
+# `.env` from disk and calls os.makedirs three times - and a single reply can
+# render a dozen strings. Every `t()` therefore used to hit the filesystem
+# repeatedly for users who have never run /language. Cache the result; the
+# only writer is switch_lang() below.
+_LANG_CACHE = {}
+
+
 def lang_of(user_id) -> str:
     if not user_id:
         return FA
-    return database.get_lang(user_id)
+    cached = _LANG_CACHE.get(user_id)
+    if cached is not None:
+        return cached
+    lang = database.get_lang(user_id)
+    _LANG_CACHE[user_id] = lang
+    return lang
+
+
+def forget_lang(user_id):
+    """Drop the cached language (e.g. after the user row is deleted)."""
+    _LANG_CACHE.pop(user_id, None)
 
 
 def t(user_id, fa, en=None):
@@ -34,6 +54,7 @@ def t_lang(lang: str, fa, en=None):
 
 def switch_lang(user_id, lang: str):
     database.set_lang(user_id, lang)
+    _LANG_CACHE[user_id] = lang
 
 
 # ----------------------------------------------------------------------

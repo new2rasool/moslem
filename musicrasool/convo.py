@@ -15,6 +15,7 @@ IMPORTANT (Pyrogram dispatcher behaviour):
   would be silently skipped - which is exactly why the developer panel
   buttons appeared to "do nothing".
 """
+import time
 import traceback
 
 from pyrogram import ContinuePropagation, StopPropagation, filters
@@ -22,13 +23,23 @@ from pyrogram.types import Message
 
 from clients import app
 
-PENDING = {}  # uid -> {"handler": callable, "data": ...}
+PENDING = {}  # uid -> {"handler": callable, "data": ..., "ts": float}
 
 CANCEL_WORDS = {"/cancel", "/canncel", "لغو", "/skip"}
 
+# A question that is never answered used to stay pending forever, so the
+# user's NEXT private message - hours later - was silently consumed by the
+# stale handler instead of reaching its real command.
+TIMEOUT = 300  # seconds
+
 
 def ask(uid, handler, data=None):
-    PENDING[uid] = {"handler": handler, "data": data}
+    PENDING[uid] = {"handler": handler, "data": data, "ts": time.time()}
+
+
+def _expired(entry) -> bool:
+    ts = entry.get("ts")
+    return ts is not None and (time.time() - ts) > TIMEOUT
 
 
 def cancel(uid):
@@ -43,12 +54,14 @@ def is_pending(uid) -> bool:
 async def _process_pending(client, m: Message):
     uid = m.from_user.id if m.from_user else m.chat.id
     entry = PENDING.get(uid)
-    if entry is None:
-        # No pending conversation - this message belongs to other handlers
-        # (admin panel buttons, /login wizard, commands, ...). Let them run.
+    if entry is None or _expired(entry):
+        # No pending conversation (or it timed out) - this message belongs to
+        # other handlers (admin panel buttons, /login wizard, commands, ...).
+        # Let them run.
+        PENDING.pop(uid, None)
         raise ContinuePropagation
     cancel(uid)
-    text = (m.text or "").strip()
+    text = (m.text or "").strip()  # see utils.msg_text: captions have text=None
     if text in CANCEL_WORDS:
         await m.reply("• عملیات لغو شد !\n• Cancelled !")
         raise StopPropagation

@@ -24,12 +24,8 @@ import time
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
-os.chdir(PROJECT_ROOT)
 
-with open(".env", "w", encoding="utf-8") as f:
-    f.write("API_ID=1234567\nAPI_HASH=0123456789abcdef0123456789abcdef\n")
-    f.write("BOT_TOKEN=123456:TESTTOKEN\nOWNER_ID=6173234874\nSUDO_ID=6173234874\n")
-    f.write("DEFAULT_LANG=fa\nDOWNLOAD_DIR=downloads\n")
+import _bootstrap  # noqa: F401  (redirects .env/DB/downloads into a temp sandbox)
 
 import config  # noqa: E402
 import database  # noqa: E402
@@ -157,16 +153,29 @@ async def main():
     utils.clear_streaming(CHAT)
 
     # ---------------------------------------------------------------
-    # 7. ntgcalls 1.2.x enum mapping present (no KeyError in calls())
+    # 7. the ntgcalls status enum used by this install is mapped in
+    #    `call_py._conversions` (no KeyError in calls()/active_calls).
+    #
+    #    ntgcalls 1.1.x (the version pinned in requirements.txt) exposes
+    #    TITLE-case members (Playing/Idling); ntgcalls 1.2.x renamed them
+    #    to UPPERCASE (PLAYING/IDLING) and clients.py adds aliases for
+    #    that case. Both are valid - assert whichever one is installed.
     # ---------------------------------------------------------------
     try:
         from ntgcalls import StreamStatus
 
         conv = call_py._conversions
-        check("conversions map UPPERCASE 1.2.x members",
-              StreamStatus.PLAYING in conv and StreamStatus.IDLING in conv)
+        if hasattr(StreamStatus, "PLAYING"):
+            # ntgcalls 1.2.x: the uppercase aliases must be present
+            ok = StreamStatus.PLAYING in conv and StreamStatus.IDLING in conv
+            label = "conversions map UPPERCASE 1.2.x members"
+        else:
+            # ntgcalls 1.1.x (pinned): the title-case members must be present
+            ok = StreamStatus.Playing in conv and StreamStatus.Idling in conv
+            label = "conversions map title-case 1.1.x members"
+        check(label, ok)
     except Exception as exc:  # noqa: BLE001
-        check("conversions map UPPERCASE 1.2.x members", False)
+        check("conversions map the installed ntgcalls status enum", False)
         print("   ->", type(exc).__name__, exc)
 
     # ---------------------------------------------------------------

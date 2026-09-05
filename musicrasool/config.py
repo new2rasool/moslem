@@ -35,6 +35,31 @@ def _get(key: str, default=None):
     return os.environ.get(key, default)
 
 
+# Sentinel used by .env.example so an unedited copy can never be mistaken for
+# a real value (and can never be a value somebody else registered).
+_PLACEHOLDER = "PUT_YOUR_"
+
+
+def _get_clean(key: str, default=None):
+    """Environment value, with .env.example placeholders treated as empty."""
+    value = _get(key, default)
+    if value is None:
+        return default
+    value = str(value).strip()
+    if not value or _PLACEHOLDER in value:
+        return default
+    return value
+
+
+def _get_int(key: str, default: int = 0) -> int:
+    """Same as _get_clean but numeric - never raises on bad input."""
+    try:
+        return int(str(_get_clean(key, "") or "").strip())
+    except (TypeError, ValueError):
+        print(f"[!] {key} in .env is not a number - ignored (setup wizard will ask).")
+        return default
+
+
 def _input(prompt: str) -> str:
     try:
         return input(prompt).strip()
@@ -44,14 +69,16 @@ def _input(prompt: str) -> str:
 
 class Config:
     def __init__(self):
-        self.API_ID = int(_get("API_ID", 0) or 0)
-        self.API_HASH = _get("API_HASH", "") or ""
-        self.BOT_TOKEN = _get("BOT_TOKEN", "") or ""
-        self.OWNER_ID = int(_get("OWNER_ID", 0) or 0)
-        self.SUDO_ID = int(_get("SUDO_ID", 0) or 0)
-        self.DOWNLOAD_DIR = _get("DOWNLOAD_DIR", "downloads")
-        self.DEFAULT_LANG = _get("DEFAULT_LANG", "fa")
-        self.MELOBIT_API = _get("MELOBIT_API", "https://api.melobit.com/v1")
+        self.API_ID = _get_int("API_ID", 0)
+        self.API_HASH = _get_clean("API_HASH", "") or ""
+        self.BOT_TOKEN = _get_clean("BOT_TOKEN", "") or ""
+        self.OWNER_ID = _get_int("OWNER_ID", 0)
+        self.SUDO_ID = _get_int("SUDO_ID", 0) or self.OWNER_ID
+        self.DOWNLOAD_DIR = _get_clean("DOWNLOAD_DIR", "downloads") or "downloads"
+        self.DEFAULT_LANG = (_get_clean("DEFAULT_LANG", "fa") or "fa").lower()
+        self.MELOBIT_API = _get_clean(
+            "MELOBIT_API", "https://api.melobit.com/v1"
+        ) or "https://api.melobit.com/v1"
 
         self.SESSION_DIR = os.path.join(BASE_DIR, "sessions")
         self.ASSETS_DIR = os.path.join(BASE_DIR, "assets")

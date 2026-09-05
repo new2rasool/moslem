@@ -96,6 +96,22 @@ where ffmpeg >nul 2>nul
 if errorlevel 1 (
     echo   Installing static ffmpeg fallback ...
     python -m pip install -q imageio-ffmpeg==0.4.9
+    REM imageio-ffmpeg only ships the binary inside site-packages, it does
+    REM NOT put it on PATH. py-tgcalls/ntgcalls invoke plain ffmpeg, so copy
+    REM it into the venv Scripts directory, which IS on PATH.
+    for /f "delims=" %%F in ('python -c "import imageio_ffmpeg;print(imageio_ffmpeg.get_ffmpeg_exe())" 2^>nul') do set "FFMPEG_BIN=%%F"
+    if defined FFMPEG_BIN (
+        if exist "!FFMPEG_BIN!" (
+            copy /y "!FFMPEG_BIN!" "venv\Scripts\ffmpeg.exe" >nul
+            echo   ffmpeg installed to venv\Scripts\ffmpeg.exe
+        )
+    )
+    where ffmpeg >nul 2>nul
+    if errorlevel 1 (
+        echo [WARN] Could not wire ffmpeg.
+        echo        Install it from https://ffmpeg.org and make sure
+        echo        "ffmpeg" is on PATH, otherwise streaming will fail.
+    )
 )
 
 REM ---------------- 5. .env ----------------
@@ -133,12 +149,39 @@ if exist ".env" (
     goto done
 
     :incomplete
-    echo [WARN] Incomplete input - copying .env.example instead.
-    copy /y .env.example .env >nul
+    REM Never copy .env.example: an unedited copy would start the bot with
+    REM placeholder credentials. Write a marked .env instead - the bot
+    REM refuses to start until it is filled in.
+    echo [WARN] Incomplete input - .env written with PLACEHOLDER values.
+    echo        Edit .env and fill in the values before starting the bot.
+    if not defined API_ID_IN set "API_ID_IN=PUT_YOUR_API_ID_HERE"
+    if not defined API_HASH_IN set "API_HASH_IN=PUT_YOUR_API_HASH_HERE"
+    if not defined BOT_TOKEN_IN set "BOT_TOKEN_IN=PUT_YOUR_BOT_TOKEN_HERE"
+    if not defined OWNER_ID_IN set "OWNER_ID_IN=PUT_YOUR_NUMERIC_USER_ID_HERE"
+    (
+        echo # MusicRasool configuration - INCOMPLETE, fill in the values marked below
+        echo API_ID=!API_ID_IN!
+        echo API_HASH=!API_HASH_IN!
+        echo BOT_TOKEN=!BOT_TOKEN_IN!
+        echo OWNER_ID=!OWNER_ID_IN!
+        echo SUDO_ID=!SUDO_ID_IN!
+        echo DEFAULT_LANG=fa
+        echo DOWNLOAD_DIR=downloads
+        echo MELOBIT_API=https://api.melobit.com/v1
+    ) > .env
 )
 
 :done
 echo ============================================
+findstr /c:"PUT_YOUR_" .env >nul 2>nul
+if not errorlevel 1 (
+    echo [ERROR] .env still contains PLACEHOLDER values.
+    echo         Set API_ID, API_HASH, BOT_TOKEN and OWNER_ID in .env,
+    echo         then run run.bat again.
+    echo ============================================
+    pause
+    exit /b 1
+)
 echo   Setup complete!
 echo   1. Run:  run.bat
 echo   2. In private chat with the bot send /login

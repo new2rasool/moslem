@@ -15,7 +15,7 @@ from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 import config
 import database
 import utils
-from clients import app, ubot, call_py, helper_session_exists
+from clients import app, ubot, call_py, helper_ready
 
 logger = logging.getLogger("musicrasool.tasks")
 cfg = config.get_config()
@@ -28,11 +28,23 @@ async def _leave_group(chat_id):
         await app.leave_chat(chat_id)
     except Exception:
         pass
-    if helper_session_exists():
+    if helper_ready():
         try:
             await ubot.leave_chat(chat_id)
         except Exception:
             pass
+
+
+def _chat_name(req, chat_id):
+    """Group/user title, tolerating a failed get_chat (bot kicked, deleted...)."""
+    if req is None:
+        return str(chat_id)
+    return getattr(req, "title", None) or getattr(req, "first_name", None) or str(chat_id)
+
+
+def _chat_link(req):
+    """Invite link, or a dash when it is unavailable."""
+    return (getattr(req, "invite_link", None) if req is not None else None) or "-"
 
 
 def _charge_button():
@@ -55,9 +67,22 @@ async def check_music_expiry():
                 if now > h48:
                     chat_id = int(i[0])
                     try:
-                        req = await app.get_chat(chat_id)
-                        req2 = await app.get_chat(int(i[1]))
+                        # advance the state FIRST: if the notification below fails
+                        # (bot kicked, deleted owner, flood wait) the row used to stay
+                        # in this state forever and be retried on every single pass.
                         database.execute("UPDATE charge SET status=1 WHERE idgp=?", (chat_id,))
+                        try:
+                            req = await app.get_chat(chat_id)
+                            req2 = await app.get_chat(int(i[1]))
+                        except Exception as exc:
+                            logger.warning("get_chat failed for %s: %s", chat_id, exc)
+                            req = req2 = None
+                        gname = _chat_name(req, chat_id)
+                        gid = getattr(req, "id", chat_id) if req is not None else chat_id
+                        glink = _chat_link(req)
+                        oname = _chat_name(req2, int(i[1]))
+                        oid = getattr(req2, "id", int(i[1])) if req2 is not None else int(i[1])
+                        ousername = (getattr(req2, "username", None) if req2 is not None else None) or "-"
                         row = database.query("SELECT * FROM charge WHERE idgp=?", (chat_id,))
                         saat = 0
                         if row:
@@ -66,14 +91,14 @@ async def check_music_expiry():
                             SUDO,
                             f"◄ تاریخ تمدید این گروه فرا رسید !\n\n"
                             f"┈┅━─━| **اطلاعات گروه** |━─━┅┈\n"
-                            f"◂ نام گروه : **{req.title}**\n"
-                            f"◂ شناسه گروه : `{req.id}`\n"
+                            f"◂ نام گروه : **{gname}**\n"
+                            f"◂ شناسه گروه : `{gid}`\n"
                             f"◂ اعتبار گروه : کمتر از {saat} ساعت\n"
-                            f"◂ لینک گروه : [برای ورود به گروه کلیک کنید.]({req.invite_link})\n\n"
+                            f"◂ لینک گروه : [برای ورود به گروه کلیک کنید.]({glink})\n\n"
                             f"┈┅━─━| **اطلاعات مالک گروه** |━─━┅┈\n"
-                            f"◂ نام مالک : **{req2.first_name}**\n"
-                            f"◂ شناسه مالک : `{req2.id}`\n"
-                            f"◂ یوزر نیم مالک : [کلیک کنید.](tg://openmessage?user_id={req2.id})",
+                            f"◂ نام مالک : **{oname}**\n"
+                            f"◂ شناسه مالک : `{oid}`\n"
+                            f"◂ یوزر نیم مالک : [کلیک کنید.](tg://openmessage?user_id={oid})",
                             disable_web_page_preview=True,
                         )
                         xs = await app.send_message(
@@ -91,7 +116,7 @@ async def check_music_expiry():
                                 int(i[1]),
                                 f"**⚠️ مدیر گرامی اعتبار گروه شما رو به اتمام است !**\n\n"
                                 f"◂ لطفاً جهت جلوگیری از خارج شدن ربات ، هرچه سریعتر به پشتیبانی ربات مراجعه نمایید.\n"
-                                f"**\n🪧 نام گروه : {req.title}\n⏳ زمان باقی مانده : {saat} ساعت**",
+                                f"**\n🪧 نام گروه : {gname}\n⏳ زمان باقی مانده : {saat} ساعت**",
                                 reply_markup=_charge_button(),
                             )
                         except Exception:
@@ -108,24 +133,37 @@ async def check_music_expiry():
                 if now > end:
                     chat_id = int(i[0])
                     try:
-                        req = await app.get_chat(chat_id)
-                        req2 = await app.get_chat(int(i[1]))
+                        # advance the state FIRST: if the notification below fails
+                        # (bot kicked, deleted owner, flood wait) the row used to stay
+                        # in this state forever and be retried on every single pass.
                         database.execute("UPDATE charge SET status=2 WHERE idgp=?", (chat_id,))
+                        try:
+                            req = await app.get_chat(chat_id)
+                            req2 = await app.get_chat(int(i[1]))
+                        except Exception as exc:
+                            logger.warning("get_chat failed for %s: %s", chat_id, exc)
+                            req = req2 = None
+                        gname = _chat_name(req, chat_id)
+                        gid = getattr(req, "id", chat_id) if req is not None else chat_id
+                        glink = _chat_link(req)
+                        oname = _chat_name(req2, int(i[1]))
+                        oid = getattr(req2, "id", int(i[1])) if req2 is not None else int(i[1])
+                        ousername = (getattr(req2, "username", None) if req2 is not None else None) or "-"
                         await app.send_message(
                             SUDO,
                             f"**◄ تاریخ تمدید این گروه فرا رسید !**\n\n"
                             f"┈┅┅━━| **اطلاعات گروه** |━━┅┅┈\n"
-                            f"◂ نام گروه : `{req.title}`\n"
-                            f"◂ شناسه گروه : `{req.id}`\n"
-                            f"◂ لینک گروه : [برای ورود به گروه کلیک کنید.]({req.invite_link})\n"
+                            f"◂ نام گروه : `{gname}`\n"
+                            f"◂ شناسه گروه : `{gid}`\n"
+                            f"◂ لینک گروه : [برای ورود به گروه کلیک کنید.]({glink})\n"
                             f"┈┅┅━━| **صاحب گروه** |━━┅┅┈\n"
-                            f"◂ نام : `{req2.first_name}`\n"
-                            f"◂ شناسه : `{req2.id}`\n"
-                            f"◂ یوزرنیم : @{req2.username}",
+                            f"◂ نام : `{oname}`\n"
+                            f"◂ شناسه : `{oid}`\n"
+                            f"◂ یوزرنیم : @{ousername}",
                             disable_web_page_preview=True,
                         )
                         try:
-                            await app.send_message(int(i[1]), f"**◂ اعتبار گروه شما با نام {req.title} به پایان رسید !**", reply_markup=_charge_button())
+                            await app.send_message(int(i[1]), f"**◂ اعتبار گروه شما با نام {gname} به پایان رسید !**", reply_markup=_charge_button())
                         except Exception:
                             pass
                         xs = await app.send_message(chat_id, "**◂ اعتبار این گروه به پایان رسیده است، جهت شارژ مجدد به پشتیبانی مراجعه کنید !**", reply_markup=_charge_button())
@@ -160,9 +198,22 @@ async def check_video_expiry():
                 if now > h48:
                     chat_id = int(i[0])
                     try:
-                        req = await app.get_chat(chat_id)
-                        req2 = await app.get_chat(int(i[1]))
+                        # advance the state FIRST: if the notification below fails
+                        # (bot kicked, deleted owner, flood wait) the row used to stay
+                        # in this state forever and be retried on every single pass.
                         database.execute("UPDATE charge2 SET status=1 WHERE idgp=?", (chat_id,))
+                        try:
+                            req = await app.get_chat(chat_id)
+                            req2 = await app.get_chat(int(i[1]))
+                        except Exception as exc:
+                            logger.warning("get_chat failed for %s: %s", chat_id, exc)
+                            req = req2 = None
+                        gname = _chat_name(req, chat_id)
+                        gid = getattr(req, "id", chat_id) if req is not None else chat_id
+                        glink = _chat_link(req)
+                        oname = _chat_name(req2, int(i[1]))
+                        oid = getattr(req2, "id", int(i[1])) if req2 is not None else int(i[1])
+                        ousername = (getattr(req2, "username", None) if req2 is not None else None) or "-"
                         row = database.query("SELECT * FROM charge2 WHERE idgp=?", (chat_id,))
                         saat = 0
                         if row:
@@ -171,14 +222,14 @@ async def check_video_expiry():
                             SUDO,
                             f"◄ تاریخ تمدید این گروه برای ویدیو فرا رسید !\n\n"
                             f"┈┅━─━| **اطلاعات گروه** |━─━┅┈\n"
-                            f"◂ نام گروه : **{req.title}**\n"
-                            f"◂ شناسه گروه : `{req.id}`\n"
+                            f"◂ نام گروه : **{gname}**\n"
+                            f"◂ شناسه گروه : `{gid}`\n"
                             f"◂ اعتبار گروه : کمتر از {saat} ساعت\n"
-                            f"◂ لینک گروه : [برای ورود به گروه کلیک کنید.]({req.invite_link})\n\n"
+                            f"◂ لینک گروه : [برای ورود به گروه کلیک کنید.]({glink})\n\n"
                             f"┈┅━─━| **اطلاعات مالک گروه** |━─━┅┈\n"
-                            f"◂ نام مالک : **{req2.first_name}**\n"
-                            f"◂ شناسه مالک : `{req2.id}`\n"
-                            f"◂ یوزر نیم مالک : [کلیک کنید.](tg://openmessage?user_id={req2.id})",
+                            f"◂ نام مالک : **{oname}**\n"
+                            f"◂ شناسه مالک : `{oid}`\n"
+                            f"◂ یوزر نیم مالک : [کلیک کنید.](tg://openmessage?user_id={oid})",
                             disable_web_page_preview=True,
                         )
                         xs = await app.send_message(
@@ -196,7 +247,7 @@ async def check_video_expiry():
                                 int(i[1]),
                                 f"**⚠️ مدیر گرامی اعتبار گروه ویدیو شما رو به اتمام است !**\n\n"
                                 f"◂ لطفاً جهت جلوگیری از خارج شدن ربات ، هرچه سریعتر به پشتیبانی ربات مراجعه نمایید.\n"
-                                f"**\n🪧 نام گروه : {req.title}\n⏳ زمان باقی مانده : {saat} ساعت**",
+                                f"**\n🪧 نام گروه : {gname}\n⏳ زمان باقی مانده : {saat} ساعت**",
                                 reply_markup=_charge_button(),
                             )
                         except Exception:
@@ -211,24 +262,37 @@ async def check_video_expiry():
                 if now > end:
                     chat_id = int(i[0])
                     try:
-                        req = await app.get_chat(chat_id)
-                        req2 = await app.get_chat(int(i[1]))
+                        # advance the state FIRST: if the notification below fails
+                        # (bot kicked, deleted owner, flood wait) the row used to stay
+                        # in this state forever and be retried on every single pass.
                         database.execute("UPDATE charge2 SET status=2 WHERE idgp=?", (chat_id,))
+                        try:
+                            req = await app.get_chat(chat_id)
+                            req2 = await app.get_chat(int(i[1]))
+                        except Exception as exc:
+                            logger.warning("get_chat failed for %s: %s", chat_id, exc)
+                            req = req2 = None
+                        gname = _chat_name(req, chat_id)
+                        gid = getattr(req, "id", chat_id) if req is not None else chat_id
+                        glink = _chat_link(req)
+                        oname = _chat_name(req2, int(i[1]))
+                        oid = getattr(req2, "id", int(i[1])) if req2 is not None else int(i[1])
+                        ousername = (getattr(req2, "username", None) if req2 is not None else None) or "-"
                         await app.send_message(
                             SUDO,
                             f"**◄ تاریخ تمدید این گروه ویدیو فرا رسید !**\n\n"
                             f"┈┅┅━━| **اطلاعات گروه** |━━┅┅┈\n"
-                            f"◂ نام گروه : `{req.title}`\n"
-                            f"◂ شناسه گروه : `{req.id}`\n"
-                            f"◂ لینک گروه : [برای ورود به گروه کلیک کنید.]({req.invite_link})\n"
+                            f"◂ نام گروه : `{gname}`\n"
+                            f"◂ شناسه گروه : `{gid}`\n"
+                            f"◂ لینک گروه : [برای ورود به گروه کلیک کنید.]({glink})\n"
                             f"┈┅┅━━| **صاحب گروه** |━━┅┅┈\n"
-                            f"◂ نام : `{req2.first_name}`\n"
-                            f"◂ شناسه : `{req2.id}`\n"
-                            f"◂ یوزرنیم : @{req2.username}",
+                            f"◂ نام : `{oname}`\n"
+                            f"◂ شناسه : `{oid}`\n"
+                            f"◂ یوزرنیم : @{ousername}",
                             disable_web_page_preview=True,
                         )
                         try:
-                            await app.send_message(int(i[1]), f"**◂ اعتبار گروه شما با نام {req.title} به پایان رسید !**", reply_markup=_charge_button())
+                            await app.send_message(int(i[1]), f"**◂ اعتبار گروه شما با نام {gname} به پایان رسید !**", reply_markup=_charge_button())
                         except Exception:
                             pass
                         xs = await app.send_message(chat_id, "**◂ اعتبار ویدیو این گروه به پایان رسیده است، جهت شارژ مجدد به پشتیبانی مراجعه کنید !**", reply_markup=_charge_button())
@@ -322,7 +386,7 @@ async def refresh_group_info():
         try:
             for i in database.query("SELECT * FROM charge WHERE status IN (0,1,2)"):
                 try:
-                    client = app if not helper_session_exists() else ubot
+                    client = app if not helper_ready() else ubot
                     req = await client.get_chat(int(i[0]))
                     database.execute("UPDATE charge SET name=?, link=? WHERE idgp=?", (req.title, req.invite_link, int(i[0])))
                 except Exception:
@@ -330,7 +394,7 @@ async def refresh_group_info():
                 await asyncio.sleep(0.5)
             for i in database.query("SELECT * FROM charge2 WHERE status IN (0,1,2)"):
                 try:
-                    client = app if not helper_session_exists() else ubot
+                    client = app if not helper_ready() else ubot
                     req = await client.get_chat(int(i[0]))
                     database.execute("UPDATE charge2 SET name=?, link=? WHERE idgp=?", (req.title, req.invite_link, int(i[0])))
                 except Exception:

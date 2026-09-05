@@ -28,20 +28,17 @@ def _video_access(chat_id):
 
 
 async def handle_player(client, m: CallbackQuery, data: str):
+    """Player control buttons.
+
+    NOTE: `"a"` (now-playing indicator) and `"clzz"` (close the language
+    panel) are answered in callbacks/router.py *before* routing reaches here,
+    so they are deliberately not handled in this module - the previous copies
+    of those two branches were unreachable.
+    """
     uid = m.from_user.id
     chat_id = m.message.chat.id
     playing = utils.PLAYING
     playlis = utils.PLAYLIS
-
-    if data == "a":
-        # "now playing" indicator button - give live feedback
-        status = "🎵"
-        if chat_id in playing:
-            status = "🎵"
-        elif chat_id in playlis:
-            status = "📃"
-        await m.answer(i18n.t(uid, "• در حال پخش ...", "• Now playing ..."), show_alert=False)
-        return True
 
     # ---- music buttons ----
     if data in ("pausee", "resumee", "closee", "mutemus", "unmutemus", "cls"):
@@ -175,15 +172,5 @@ async def handle_player(client, m: CallbackQuery, data: str):
                     pass
                 await m.answer(i18n.t(uid, "• پنل با موفقیت بسته شد !", "• Panel closed !"), show_alert=True)
                 return True
-
-    if data == "clzz":
-        access = [*database.idsudos(), *database.idowner(), SUDO, OWNER]
-        if uid in access:
-            try:
-                await m.message.delete()
-            except Exception:
-                pass
-            await m.answer(i18n.t(uid, "• پنل با موفقیت بسته شد !", "• Panel closed !"), show_alert=True)
-            return True
 
     return False

@@ -141,11 +141,20 @@ def sudo_access():
 # ----------------------------------------------------------------------
 # Timestamps
 # ----------------------------------------------------------------------
-def jalali_now() -> str:
+def jalali_now(lang: str = "fa") -> str:
+    """`HH:MM:SS` + the current Jalali date.
+
+    The Jalali calendar was formatted with the *default* (English) locale, so
+    Persian users saw "Sat 14 Sha 1405". The date is now rendered with Persian
+    weekday/month names unless `lang == "en"`.
+    """
     try:
-        hour = jdatetime.datetime.now().strftime("%H:%M:%S")
-        dat = jdatetime.datetime.now().strftime("\n%a %d %b %Y")
-        return hour + dat
+        now = jdatetime.datetime.now()
+        if str(lang).lower().startswith("en"):
+            dat = now.strftime("\n%a %d %b %Y")
+        else:
+            dat = now.aslocale(jdatetime.FA_LOCALE).strftime("\n%a %d %b %Y")
+        return now.strftime("%H:%M:%S") + dat
     except Exception:
         return time.strftime("%H:%M:%S\n%a %d %b %Y")
 
@@ -461,6 +470,43 @@ async def melobit_search(query: str, limit: int = 1):
         return []
 
 
+async def fetch_media(url: str, name: str, max_bytes: int = 300 * 1024 * 1024):
+    """Download a media URL into DOWNLOAD_DIR and return its path (or None).
+
+    Telegram only lets a bot upload-by-URL files up to 20 MB, so handing a
+    remote URL to `send_audio` fails for anything longer than a few minutes.
+    Fetching the bytes ourselves and uploading the local file removes that
+    ceiling (bots may upload up to 50 MB) and keeps the failure visible.
+    """
+    import aiohttp
+
+    cfg = config.get_config()
+    os.makedirs(cfg.DOWNLOAD_DIR, exist_ok=True)
+    safe_name = "".join(ch for ch in (name or "media") if ch not in '/\\:*?"<>|') or "media"
+    dest = os.path.join(cfg.DOWNLOAD_DIR, safe_name)
+    try:
+        timeout = aiohttp.ClientTimeout(total=180)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(url) as resp:
+                if resp.status != 200:
+                    return None
+                total = 0
+                with open(dest, "wb") as fh:
+                    async for chunk in resp.content.iter_chunked(128 * 1024):
+                        total += len(chunk)
+                        if total > max_bytes:
+                            raise ValueError("file too large")
+                        fh.write(chunk)
+        return dest
+    except Exception as exc:
+        logging.getLogger(__name__).warning("fetch_media failed for %s: %s", url, exc)
+        try:
+            os.remove(dest)
+        except OSError:
+            pass
+        return None
+
+
 async def melobit_song(song_id):
     import aiohttp
     base = cfg.MELOBIT_API.rstrip("/")
@@ -517,9 +563,33 @@ def is_number(text: str) -> bool:
     return bool(re.fullmatch(r"-?\d+", str(text).strip()))
 
 
+def brief_error(exc) -> str:
+    """Short, safe one-liner for user-facing error messages.
+
+    A raw `str(exc)` from Pyrogram embeds the Telegram error description and,
+    for local failures, file paths and internals. Show the class name (plus
+    the stable Telegram error id when there is one) and keep the detail in
+    the log.
+    """
+    name = type(exc).__name__
+    err_id = getattr(exc, "ID", None)
+    return f"{name} ({err_id})" if err_id else name
+
+
+def msg_text(m) -> str:
+    """The text a `filters.regex` handler actually matched.
+
+    `filters.regex` matches `message.text or message.caption`, so a photo or
+    video with a matching caption reaches these handlers with
+    `m.text is None` - touching it directly raised AttributeError and the
+    command silently did nothing.
+    """
+    return getattr(m, "text", None) or getattr(m, "caption", None) or ""
+
+
 def clean_command(text: str, fa_prefix: str, en_prefix: str) -> str:
     """Strip a command prefix (Persian or English) from message text."""
-    text = str(text)
+    text = "" if text is None else str(text)
     text = text.replace(fa_prefix, "")
     m = re.search(re.escape(en_prefix) + r"\b", text, flags=re.IGNORECASE)
     if m:
@@ -542,6 +612,11 @@ async def checkjoin(client, m, user_id):
     if ch_rows == []:
         return None
     x = ch_rows[0]
+    # channel columns: 0=idchannel 1=namechannel 2=invite 3=status
+    # `status` is written by the owner panel (join_on / join_off); without this
+    # check force-join could never be switched off again.
+    if len(x) < 4 or not x[3]:
+        return None
     uid = user_id
     fa_join = "◂ کاربر عزیز {mention} برای دستور دادن به ربات ابتدا باید در کانال ربات عضو شوید."
     fa_admin = "• لطفا ابتدا ربات را در کانال زیر ادمین کرده و سپس مجددا تلاش کنید !"

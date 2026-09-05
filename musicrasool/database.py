@@ -144,6 +144,34 @@ CREATE TABLE IF NOT EXISTS banlist(
     idgp BIGINT,
     ban BIGINT
 );
+
+-- ----------------------------------------------------------------------
+-- Indexes for the columns the handlers actually filter on.
+--
+-- None of the tables above declare a key, so every lookup was a full table
+-- scan. `CREATE INDEX IF NOT EXISTS` is idempotent and also applies to
+-- databases created by older versions, so no migration is needed. Adding
+-- real PRIMARY KEY / UNIQUE constraints instead would change insert
+-- semantics, which is deliberately not done here.
+-- ----------------------------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_users_iduser      ON users(iduser);
+CREATE INDEX IF NOT EXISTS idx_gp_idgp           ON gp(idgp);
+CREATE INDEX IF NOT EXISTS idx_charge_idgp       ON charge(idgp);
+CREATE INDEX IF NOT EXISTS idx_charge_status     ON charge(status);
+CREATE INDEX IF NOT EXISTS idx_charge2_idgp      ON charge2(idgp);
+CREATE INDEX IF NOT EXISTS idx_charge2_status    ON charge2(status);
+CREATE INDEX IF NOT EXISTS idx_musicadmin_pair   ON musicadmin(idgp, idadmin);
+CREATE INDEX IF NOT EXISTS idx_videoadmins_pair  ON videoadmins(idgp, idadmin);
+CREATE INDEX IF NOT EXISTS idx_creators_idgp     ON creators(idgp);
+CREATE INDEX IF NOT EXISTS idx_playlist_idgp     ON playlist(idgp);
+CREATE INDEX IF NOT EXISTS idx_ejbar_idgp        ON ejbar(idgp);
+CREATE INDEX IF NOT EXISTS idx_banlist_ban       ON banlist(ban);
+CREATE INDEX IF NOT EXISTS idx_sudo_idsudo       ON sudo(idsudo);
+CREATE INDEX IF NOT EXISTS idx_owner_idowner     ON owner(idowner);
+CREATE INDEX IF NOT EXISTS idx_alll_status       ON alll(status);
+CREATE INDEX IF NOT EXISTS idx_money1_kos        ON money1(kos);
+CREATE INDEX IF NOT EXISTS idx_paye_kos          ON paye(kos);
+CREATE INDEX IF NOT EXISTS idx_etebar_kos        ON etebar(kos);
 """
 
 

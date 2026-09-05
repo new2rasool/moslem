@@ -25,6 +25,7 @@ from pyrogram.types import Message
 
 import config
 import i18n
+import utils
 from clients import app
 from handlers.private import LOGIN_STATE
 
@@ -131,7 +132,7 @@ async def login_flow(client, m: Message):
                     uid,
                     "❌ ارسال کد با مشکل مواجه شد !\n`{}`",
                     "❌ Failed to send the code !\n`{}`",
-                ).format(exc)
+                ).format(utils.brief_error(exc))
             )
         await m.reply(
             i18n.t(
@@ -159,7 +160,7 @@ async def login_flow(client, m: Message):
                     uid,
                     "❌ خطای داخلی در فراخوانی ورود (`{}`).\nلطفا یک بار دیگر تلاش کنید یا `sessions/helper.session` را حذف و از ابتدا شروع کنید.",
                     "❌ Internal error while signing in (`{}`).\nPlease retry, or delete `sessions/helper.session` and start over.",
-                ).format(exc)
+                ).format(utils.brief_error(exc))
             )
         except SessionPasswordNeeded:
             state["step"] = "password"
@@ -176,19 +177,21 @@ async def login_flow(client, m: Message):
             )
         except BadRequest as exc:
             return await m.reply(
-                i18n.t(uid, "❌ خطا : `{}`", "❌ Error : `{}`").format(exc)
+                i18n.t(uid, "❌ خطا : `{}`", "❌ Error : `{}`").format(utils.brief_error(exc))
             )
         except Exception as exc:
             logger.exception("sign_in failed")
             return await m.reply(
-                i18n.t(uid, "❌ خطا : `{}`", "❌ Error : `{}`").format(exc)
+                i18n.t(uid, "❌ خطا : `{}`", "❌ Error : `{}`").format(utils.brief_error(exc))
             )
+        # read the helper's identity while it is still connected
+        helper_name = await _helper_display_name(cli)
         try:
             await cli.disconnect()
         except Exception:
             pass
         LOGIN_STATE.pop(uid, None)
-        return await _login_done(client, m)
+        return await _login_done(client, m, helper_name)
 
     if state["step"] == "password":
         cli = state.get("client")
@@ -201,23 +204,37 @@ async def login_flow(client, m: Message):
         except Exception as exc:
             logger.exception("check_password failed")
             return await m.reply(
-                i18n.t(uid, "❌ خطا : `{}`", "❌ Error : `{}`").format(exc)
+                i18n.t(uid, "❌ خطا : `{}`", "❌ Error : `{}`").format(utils.brief_error(exc))
             )
+        # read the helper's identity while it is still connected
+        helper_name = await _helper_display_name(cli)
         try:
             await cli.disconnect()
         except Exception:
             pass
         LOGIN_STATE.pop(uid, None)
-        return await _login_done(client, m)
+        return await _login_done(client, m, helper_name)
 
 
-async def _login_done(client, m: Message):
-    uid = m.from_user.id if m.from_user else m.chat.id
+async def _helper_display_name(cli) -> str:
+    """Identity of the HELPER account.
+
+    `client` in this module is the BOT, so `client.get_me()` returns the bot's
+    name - calling it here used to make the success message announce the bot
+    as the helper. The identity has to be read from the temporary helper
+    client, and *before* it is disconnected.
+    """
+    if cli is None:
+        return "Helper"
     try:
-        me = await client.get_me()
-        first_name = me.first_name
+        me = await cli.get_me()
     except Exception:
-        first_name = "Helper"
+        return "Helper"
+    return getattr(me, "first_name", None) or getattr(me, "username", None) or f"#{getattr(me, 'id', '?')}"
+
+
+async def _login_done(client, m: Message, first_name: str = "Helper"):
+    uid = m.from_user.id if m.from_user else m.chat.id
     await m.reply(
         i18n.t(
             uid,

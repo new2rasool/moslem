@@ -35,7 +35,14 @@ import callbacks.router      # noqa: E402,F401
 import callbacks.events      # noqa: E402,F401
 import tasks                 # noqa: E402,F401
 
-from clients import app, call_py, ubot, helper_session_exists  # noqa: E402
+from clients import (  # noqa: E402
+    app,
+    call_py,
+    ubot,
+    helper_session_exists,
+    helper_ready,
+    set_helper_online,
+)
 
 
 async def entry():
@@ -87,6 +94,14 @@ async def main():
             print("      Delete sessions/helper.session and run /login again.")
     else:
         print("  [!] No helper session - streaming disabled until /login")
+
+    # Publish the outcome so the play paths gate on the real state instead of
+    # on the mere presence of sessions/helper.session (see clients.helper_ready).
+    set_helper_online(helper_ok)
+    if helper_session_exists() and not helper_ready():
+        print("  [!] A helper session file exists but the helper is NOT online.")
+        print("      Streaming, TV and voice-chat commands are disabled until this")
+        print("      is fixed - delete sessions/helper.session and run /login again.")
 
     # ------------------------------------------------------------------
     # 3. Background tasks

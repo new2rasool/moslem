@@ -20,12 +20,8 @@ import pyrogram
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
-os.chdir(PROJECT_ROOT)
 
-with open(".env", "w", encoding="utf-8") as f:
-    f.write("API_ID=1234567\nAPI_HASH=0123456789abcdef0123456789abcdef\n")
-    f.write("BOT_TOKEN=123456:TESTTOKEN\nOWNER_ID=6173234874\nSUDO_ID=6173234874\n")
-    f.write("DEFAULT_LANG=fa\nDOWNLOAD_DIR=downloads\n")
+import _bootstrap  # noqa: F401  (redirects .env/DB/downloads into a temp sandbox)
 
 import config  # noqa: E402
 import database  # noqa: E402
@@ -37,7 +33,7 @@ import handlers.private  # noqa: E402,F401
 import handlers.auth as auth  # noqa: E402
 
 # make sure no leftover session from other tests
-_session_path = os.path.join(PROJECT_ROOT, "sessions", "helper.session")
+_session_path = _bootstrap.HELPER_SESSION
 if os.path.exists(_session_path):
     os.remove(_session_path)
 
@@ -93,6 +89,16 @@ class FakeTempClient:
     async def disconnect(self):
         self.disconnected = True
         self.calls.append("disconnect")
+
+    async def get_me(self):
+        """The HELPER account's identity - deliberately different from the bot's."""
+        self.calls.append("get_me")
+
+        class Me:
+            first_name = "TestHelper"
+            username = "test_helper"
+            id = 777
+        return Me()
 
     async def send_code(self, phone):
         self.calls.append(("send_code", phone))
@@ -200,6 +206,10 @@ async def main():
     check("temp client disconnected", fake.disconnected)
     check("state cleared after success", OWNER_USER_ID not in auth.LOGIN_STATE)
     check("success message sent", any("با موفقیت" in r for r in m4.replies))
+    # regression: the message announces the HELPER account, not the bot
+    check("helper identity read from the helper client", "get_me" in fake.calls)
+    check("success message names the helper", any("TestHelper" in r for r in m4.replies))
+    check("success message does not name the bot", not any("TestBot" in r for r in m4.replies))
 
     # 6. 2FA path
     auth.LOGIN_STATE.clear()
