@@ -1,0 +1,36 @@
+# ============================================================
+#  MusicRasool - Music & Video Streaming Bot requirements
+#  STRICT version pins (tested together - do NOT use "latest")
+# ============================================================
+# Python 3.9 - 3.11 recommended (py-tgcalls/ntgcalls wheels)
+
+# ---- MTProto client (ONLY Pyrogram - no Telethon mixed in) ----
+pyrogram==2.0.106
+
+# ---- Voice/Video call engine (classic API: join_group_call) ----
+# py-tgcalls 1.2.9 is built against ntgcalls 1.1.x (title-case enums
+# StreamStatus.Playing / InputMode.Shell). ntgcalls==1.1.3 ships
+# prebuilt wheels for Linux/macOS/Windows on Python 3.8 - 3.12.
+# (clients.py contains a small shim that also tolerates ntgcalls 1.2.x)
+py-tgcalls==1.2.9
+ntgcalls==1.1.3
+
+# ---- Downloads / YouTube ----
+yt-dlp==2026.7.4
+youtube-search-python==1.6.6
+
+# ---- Persian (Jalali) calendar for timestamps ----
+jdatetime==6.0.1
+
+# ---- Async HTTP (used by py-tgcalls and Melobit search) ----
+aiohttp==3.9.5
+
+# ---- py-tgcalls runtime dependencies ----
+psutil==5.9.8
+screeninfo==0.8.1
+deprecation==2.1.0
+
+# ---- System binary (FFmpeg) ----
+# FFmpeg must be installed on the system. On machines without a
+# system ffmpeg, imageio-ffmpeg provides a static binary:
+# imageio-ffmpeg==0.4.9

@@ -1,0 +1,8 @@
+.env
+database.sqlite
+sessions/
+downloads/*
+!downloads/.gitkeep
+__pycache__/
+*.pyc
+venv/
