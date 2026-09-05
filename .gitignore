@@ -2,3 +2,6 @@
 extracted/
 __pycache__/
 *.pyc
+
+# build artifact: the source bundle produced by 'git archive'
+MusicRasool-fixed.zip
