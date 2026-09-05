@@ -11,6 +11,8 @@ import asyncio
 import logging
 import os
 import re
+import shutil
+import sys
 import time
 
 import jdatetime
@@ -376,22 +378,267 @@ def start_keyboard(user_id, info, channel_link):
 # ----------------------------------------------------------------------
 # YouTube direct URL (yt-dlp, falls back to youtube-dl)
 # ----------------------------------------------------------------------
-async def utub(link: str) -> str:
-    """Return a direct streamable URL for a YouTube link (best <=720p)."""
-    for exe in ("yt-dlp", "youtube-dl"):
+# ----------------------------------------------------------------------
+# External binaries and YouTube (yt-dlp) helpers
+# ----------------------------------------------------------------------
+# `best[...]` alone asks yt-dlp for a single combined (video+audio) format,
+# which YouTube only serves up to 720p and not for every video - the old
+# selector therefore returned nothing for a large share of links and the
+# caller could only report a generic "download failed". These chains fall
+# back to separate video+audio (merged by ffmpeg) and then to anything.
+YTDLP_FMT_VIDEO = (
+    "bv*[height<=?720][ext=mp4]+ba[ext=m4a]/"
+    "bv*[height<=?720]+ba/"
+    "b[height<=?720]/"
+    "bv*+ba/b"
+)
+YTDLP_FMT_AUDIO = "ba[ext=m4a]/ba[ext=mp3]/ba/b"
+
+
+def _find_exe(*names):
+    """Locate a binary on PATH, then next to the running interpreter.
+
+    `yt-dlp` is installed into the virtualenv, so it is only on PATH when the
+    venv is activated (what run.sh/run.bat do). Looking next to
+    sys.executable keeps it working when the bot is started any other way.
+    """
+    for n in names:
+        found = shutil.which(n)
+        if found:
+            return found
+    bindir = os.path.dirname(os.path.abspath(sys.executable))
+    for n in names:
+        for cand in (os.path.join(bindir, n), os.path.join(bindir, n + ".exe")):
+            if os.path.isfile(cand) and os.access(cand, os.X_OK):
+                return cand
+    return None
+
+
+def ytdlp_exe():
+    """Path to the yt-dlp CLI, or None when it is not installed."""
+    return _find_exe("yt-dlp", "youtube-dl")
+
+
+def ffmpeg_missing() -> bool:
+    """True when no ffmpeg can be found (streaming cannot work at all)."""
+    if _find_exe("ffmpeg"):
+        return False
+    try:
+        import imageio_ffmpeg
+        return not os.path.exists(imageio_ffmpeg.get_ffmpeg_exe())
+    except Exception:
+        return True
+
+
+async def _run_cmd(cmd, timeout=600):
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    try:
+        out, err = await asyncio.wait_for(proc.communicate(), timeout)
+    except asyncio.TimeoutError:
         try:
-            proc = await asyncio.create_subprocess_exec(
-                exe, "-g", "-f", "best[height<=?720][width<=?1280]", link,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+            proc.kill()
+        except Exception:
+            pass
+        await proc.communicate()
+        raise
+    return proc.returncode, out.decode(errors="ignore"), err.decode(errors="ignore")
+
+
+def _safe_name(text: str, default: str = "media") -> str:
+    cleaned = "".join(ch for ch in (text or "") if ch not in '/\\:*?"<>|').strip()
+    return (cleaned[:80] or default)
+
+
+async def ytdlp_info(url: str):
+    """Metadata for a URL via yt-dlp, or None."""
+    exe = ytdlp_exe()
+    if not exe:
+        return None
+    try:
+        rc, out, _err = await _run_cmd(
+            [exe, "--no-playlist", "--dump-single-json", "--no-warnings", url],
+            timeout=120,
+        )
+    except Exception as exc:
+        logger.warning("yt-dlp info failed for %s: %s", url, exc)
+        return None
+    if rc != 0 or not out.strip():
+        return None
+    import json
+    try:
+        return json.loads(out)
+    except Exception:
+        return None
+
+
+async def ytdlp_search(query: str, limit: int = 1):
+    """Search YouTube. Returns a list of {"title", "url"} dicts.
+
+    yt-dlp's own search is used first because it is maintained together with
+    the extractor; `youtube-search-python` scrapes the HTML page and breaks
+    whenever YouTube changes markup, so it is only a fallback.
+    """
+    exe = ytdlp_exe()
+    if exe:
+        try:
+            rc, out, _err = await _run_cmd(
+                [exe, f"ytsearch{limit}:{query}", "--dump-single-json",
+                 "--no-warnings", "--flat-playlist"],
+                timeout=120,
             )
-            stdout, _ = await proc.communicate()
-            out = stdout.decode(errors="ignore").split("\n")[0].strip()
-            if out:
-                return out
-        except FileNotFoundError:
-            continue
-    return ""
+            if rc == 0 and out.strip():
+                import json
+                data = json.loads(out)
+                entries = data.get("entries") or []
+                found = []
+                for e in entries:
+                    url = e.get("url") or e.get("webpage_url")
+                    vid = e.get("id")
+                    if not url and vid:
+                        url = f"https://www.youtube.com/watch?v={vid}"
+                    if url:
+                        found.append({"title": e.get("title") or "YouTube", "url": url})
+                if found:
+                    return found
+        except Exception as exc:
+            logger.warning("yt-dlp search failed: %s", exc)
+
+    # fallback: youtube-search-python
+    try:
+        from youtubesearchpython import VideosSearch
+
+        def _blocking():
+            return VideosSearch(query, limit=limit).result().get("result") or []
+
+        rows = await asyncio.to_thread(_blocking)
+        return [{"title": r.get("title") or "YouTube", "url": r["link"]}
+                for r in rows if r.get("link")]
+    except Exception as exc:
+        logger.warning("youtube-search-python failed: %s", exc)
+        return []
+
+
+# Upper bound for a file fetched from an arbitrary link. Telegram media goes
+# through fetch_media() and is capped by Telegram itself, but a plain URL has
+# no natural limit and would otherwise fill the disk.
+MAX_LINK_BYTES = 300 * 1024 * 1024
+
+
+async def download_url(url: str, prefix: str, suffix: str = ""):
+    """Stream a plain HTTP(S) file into DOWNLOAD_DIR.
+
+    Returns (path, None) on success or (None, reason) on failure. Downloading
+    instead of handing the URL to ffmpeg means we can probe the real
+    resolution before streaming (the legacy VideoParameters() call hard-coded
+    640x360 for every link) and gives a readable error on failure.
+    """
+    import aiohttp
+    cfg = config.get_config()
+    os.makedirs(cfg.DOWNLOAD_DIR, exist_ok=True)
+    if not suffix:
+        suffix = os.path.splitext(url.split("?")[0])[1][:8] or ".bin"
+    dest = os.path.join(cfg.DOWNLOAD_DIR, f"{_safe_name(prefix, 'link')}{suffix}")
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=300) as resp:
+                if resp.status != 200:
+                    return None, f"HTTP {resp.status}"
+                total = 0
+                with open(dest, "wb") as fh:
+                    async for chunk in resp.content.iter_chunked(1 << 16):
+                        total += len(chunk)
+                        if total > MAX_LINK_BYTES:
+                            fh.close()
+                            os.remove(dest)
+                            return None, f"file is larger than {MAX_LINK_BYTES // (1 << 20)} MB"
+                        fh.write(chunk)
+    except Exception as exc:
+        try:
+            if os.path.exists(dest):
+                os.remove(dest)
+        except Exception:
+            pass
+        return None, brief_error(exc)
+    if not os.path.exists(dest) or os.path.getsize(dest) == 0:
+        return None, "the download was empty"
+    return dest, None
+
+
+async def ytdlp_download(url: str, prefix: str, video: bool = True):
+    """Download a URL into DOWNLOAD_DIR and return (path, title) or (None, why).
+
+    Streaming the remote URL straight into ffmpeg used to fail for YouTube
+    (the direct googlevideo URL expires, needs the right format and sometimes
+    headers). Downloading first is what the Melobit music path already does
+    and it also lets us probe the real resolution.
+    """
+    exe = ytdlp_exe()
+    if not exe:
+        return None, "yt-dlp is not installed (pip install -r requirements.txt)"
+    if ffmpeg_missing():
+        return None, "ffmpeg is missing - streaming cannot work"
+
+    cfg = config.get_config()
+    os.makedirs(cfg.DOWNLOAD_DIR, exist_ok=True)
+    template = os.path.join(cfg.DOWNLOAD_DIR, f"{_safe_name(prefix, 'yt')}.%(ext)s")
+    fmt = YTDLP_FMT_VIDEO if video else YTDLP_FMT_AUDIO
+    cmd = [exe, "-f", fmt, "--no-playlist", "--no-warnings",
+           "--restrict-filenames", "--no-overwrites", "-o", template, url]
+    if video:
+        cmd += ["--merge-output-format", "mp4"]
+    try:
+        rc, _out, err = await _run_cmd(cmd, timeout=900)
+    except asyncio.TimeoutError:
+        return None, "yt-dlp timed out"
+    except Exception as exc:
+        return None, f"yt-dlp failed: {brief_error(exc)}"
+    if rc != 0:
+        # last non-empty stderr line is the human-readable reason
+        lines = [ln.strip() for ln in err.splitlines() if ln.strip()]
+        return None, (lines[-1][:200] if lines else f"yt-dlp exited with {rc}")
+
+    stem = os.path.join(cfg.DOWNLOAD_DIR, _safe_name(prefix, "yt"))
+    for ext in ("mp4", "m4a", "webm", "mkv", "mp3", "opus", "m4v"):
+        cand = f"{stem}.{ext}"
+        if os.path.isfile(cand) and os.path.getsize(cand) > 0:
+            return cand, ""
+    # --restrict-filenames may have altered the stem; fall back to a scan
+    newest, newest_ts = None, 0.0
+    for fn in os.listdir(cfg.DOWNLOAD_DIR):
+        fp = os.path.join(cfg.DOWNLOAD_DIR, fn)
+        if os.path.isfile(fp) and os.path.getmtime(fp) > newest_ts:
+            newest, newest_ts = fp, os.path.getmtime(fp)
+    if newest:
+        return newest, ""
+    return None, "yt-dlp produced no file"
+
+
+async def utub(link: str) -> str:
+    """Return a direct streamable URL for a YouTube link (<=720p).
+
+    Kept for compatibility, but prefer `ytdlp_download()`: the direct URL
+    expires and cannot be probed for resolution.
+    """
+    exe = ytdlp_exe()
+    if not exe:
+        return ""
+    try:
+        rc, out, err = await _run_cmd(
+            [exe, "-g", "-f", YTDLP_FMT_VIDEO, "--no-playlist", "--no-warnings", link],
+            timeout=180,
+        )
+    except Exception as exc:
+        logger.warning("utub failed for %s: %s", link, exc)
+        return ""
+    if rc != 0:
+        logger.warning("utub: %s", (err or "").strip().splitlines()[-1:] or rc)
+        return ""
+    # -g prints one URL per stream (video then audio); the first is the video
+    return out.split("\n")[0].strip()
 
 
 async def probe_resolution(path: str):
@@ -454,7 +701,14 @@ def is_audio_path(path: str) -> bool:
 
 
 def is_youtube_link(text: str) -> bool:
-    return "youtube.com/watch" in text or "youtu.be/" in text
+    """True for the YouTube URL shapes users actually paste.
+
+    The old check only accepted `youtube.com/watch`, so `youtu.be/...`,
+    `/shorts/...`, `/live/...` and `music.youtube.com` links were rejected
+    as "invalid link".
+    """
+    t = (text or "").lower()
+    return ("youtube.com/" in t or "youtu.be/" in t or "youtube-nocookie.com/" in t)
 
 
 # ----------------------------------------------------------------------
@@ -464,10 +718,13 @@ async def melobit_search(query: str, limit: int = 1):
     """Return list of song dicts from Melobit public API."""
     import aiohttp
     base = cfg.MELOBIT_API.rstrip("/")
-    url = f"{base}/search/song?query={query}&limit={limit}"
+    # the query was interpolated straight into the URL, so a song title with
+    # "#" truncated it into a fragment and "&" split it into extra params.
+    url = f"{base}/search/song"
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, timeout=20) as resp:
+            async with session.get(url, params={"query": query, "limit": limit},
+                                   timeout=20) as resp:
                 if resp.status != 200:
                     return []
                 data = await resp.json()

@@ -18,6 +18,7 @@ TESTS = [
     "tests/test_panel_buttons.py",
     "tests/test_stream_lifecycle.py",
     "tests/test_regressions.py",
+    "tests/test_playback_youtube.py",
 ]
 
 failed = []

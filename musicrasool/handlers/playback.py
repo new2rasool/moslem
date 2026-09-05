@@ -57,6 +57,57 @@ async def stop_current(chat_id):
             pass
 
 
+async def _del(message):
+    """Delete a transient status message, ignoring any failure."""
+    if message is None:
+        return
+    try:
+        await message.delete()
+    except Exception:
+        pass
+
+
+def _download_failed(uid, why):
+    """User-facing download error that includes the real reason.
+
+    Every failure used to collapse into the same "Download failed !" string,
+    which made it impossible to tell "yt-dlp is not installed" from
+    "this video is private" from "ffmpeg is missing".
+    """
+    reason = (why or "").strip()
+    if reason:
+        return i18n.t(uid, f"• عملیات دانلود با شکست مواجه شد !\n`{reason}`",
+                           f"• Download failed !\n`{reason}`")
+    return i18n.t(uid, "• عملیات دانلود با شکست مواجه شد !", "• Download failed !")
+
+
+async def _resolve_stream_url(url: str, chat_id: int, uid: int, msg_id: int, video: bool):
+    """Turn any playable URL into a local file, with the reason if that fails.
+
+    Returns (path, title, resolution, error). All four link commands
+    (`پخش لینک`, `پخش لینک ویدیو`, `/play`, `/playvideo`) used to hand the raw
+    URL to ffmpeg, which has no YouTube demuxer at all and always assumed
+    640x360 for video.
+    """
+    youtube = utils.is_youtube_link(url)
+    tag = ("ytv" if video else "yta") if youtube else ("lnkv" if video else "lnka")
+    prefix = f"{tag}_{chat_id}_{uid}_{msg_id}"
+    if youtube:
+        info = await utils.ytdlp_info(url)
+        title = (info or {}).get("title") or "YouTube"
+        path, why = await utils.ytdlp_download(url, prefix, video=video)
+        if not path:
+            return None, title, None, why
+    else:
+        suffix = os.path.splitext(url.split("?")[0])[1][:8] or (".mp4" if video else ".mp3")
+        path, why = await utils.download_url(url, prefix, suffix)
+        if not path:
+            return None, "—", None, why
+        title = "—"
+    resolution, _duration = await utils.probe_media(path)
+    return path, title, resolution, None
+
+
 def media_name(m):
     audio = m.audio
     if audio:
@@ -173,6 +224,11 @@ async def play_video(client, m, path, extra_title="", resolution=None, reply_id=
     uid = m.from_user.id
     chat_id = m.chat.id
     await stop_current(chat_id)
+    if resolution is None and os.path.isfile(path):
+        # Without a resolution the legacy VideoParameters() default (640x360)
+        # was used, so every video coming from a link/YouTube was downscaled to
+        # 360p regardless of its real size.
+        resolution, _probed_dur = await utils.probe_media(path)
     if resolution:
         stream = AudioVideoPiped(path, video_parameters=VideoParameters(*resolution))
     else:
@@ -235,6 +291,11 @@ async def play_dedicated_video(client, m, path, target_chat, resolution=None, du
     uid = m.from_user.id
     chat_id = m.chat.id
     await stop_current(chat_id)
+    if resolution is None and os.path.isfile(path):
+        # Without a resolution the legacy VideoParameters() default (640x360)
+        # was used, so every video coming from a link/YouTube was downscaled to
+        # 360p regardless of its real size.
+        resolution, _probed_dur = await utils.probe_media(path)
     if resolution:
         stream = AudioVideoPiped(path, video_parameters=VideoParameters(*resolution))
     else:
@@ -303,7 +364,15 @@ async def play_reply(client, m: Message):
         await m.reply(i18n.t(uid, "• پخش با مشکل مواجه شد !", "• Playback failed !"))
 
 
-@app.on_message(filters.group & filters.reply & (filters.regex(r"^(پخش )(?!لینک|یوتیوب|خودکار|لیست)") | filters.regex(r"^([Pp][Ll][Aa][Yy]) ")))
+# NOTE: this handler is registered BEFORE playvideo_reply / playvideo_dedicate /
+# play_file_cmd and all three share the "پخش " prefix, so every one of them has
+# to appear in the negative lookahead. `ویدیو` and `فایل` were missing, which
+# meant that replying to a video and sending "پخش ویدیو" (or "پخش ویدیو @user")
+# was swallowed here and ended in a "user not found" error instead of playing.
+@app.on_message(filters.group & filters.reply & (
+    filters.regex(r"^(پخش )(?!لینک|یوتیوب|خودکار|لیست|ویدیو|فایل)")
+    | filters.regex(r"^([Pp][Ll][Aa][Yy]) (?! ?[Vv]ideo| ?[Ff]ile| ?[Ll]ink| ?[Aa]uto| ?[Ll]ist| ?[Yy]ou)")
+))
 async def play_dedicate(client, m: Message):
     uid = m.from_user.id
     horn = [*database.moz(1), *database.moz(0)]
@@ -329,11 +398,18 @@ async def play_dedicate(client, m: Message):
             return
         if not await require_helper(uid, m):
             return
+        status = await m.reply(i18n.t(uid, "**⌯** در حال دریافت ... **⌯**", "**⌯** Fetching ... **⌯**"))
         try:
-            print("Playing {} in {}".format(text, m.chat.title))
-            await play_audio(client, m, text, "لینک")
+            path, title, _resolution, err = await _resolve_stream_url(text, m.chat.id, uid, m.id, False)
+            if not path:
+                await _del(status)
+                return await m.reply(_download_failed(uid, err))
+            await _del(status)
+            print("Playing {} in {}".format(path, m.chat.title))
+            await play_audio(client, m, path, title)
         except Exception as exc:
             print(exc)
+            await _del(status)
             await m.reply(i18n.t(uid, "• پخش با مشکل مواجه شد !", "• Playback failed !"))
         return
     target = await utils.resolve_chat(text)
@@ -466,8 +542,11 @@ async def play_link_video(client, m: Message):
         return await m.reply(i18n.t(uid, "• گروه فاقد اعتبار میباشد !", "• The group has no credit !"))
     if uid not in access:
         return
-    text = utils.clean_command(m.text, "پخش لینک ویدیو", "PlayLinkVideo").strip()
-    if ".mp4" not in text and ".mkv" not in text:
+    text = utils.clean_command(utils.msg_text(m), "پخش لینک ویدیو", "PlayLinkVideo").strip()
+    # the old check only looked for the literal strings ".mp4"/".mkv" in the
+    # URL, so anything else (.webm, .mov, a link with a query string, a
+    # YouTube link) was refused as "not a video link" without a single attempt.
+    if not text.startswith("http"):
         return await m.reply(i18n.t(uid, "این لینک دانلود ویدیو نیست و امکان پخش وجود ندارد !", "This is not a video download link and cannot be played !"))
     if await utils.checkjoin(client, m, uid) is not None:
         return
@@ -475,11 +554,18 @@ async def play_link_video(client, m: Message):
         return
     if not await require_helper(uid, m):
         return
+    status = await m.reply(i18n.t(uid, "**⌯** در حال دریافت ... **⌯**", "**⌯** Fetching ... **⌯**"))
     try:
-        print("Playing {} in {}".format(text, m.chat.title))
-        await play_video(client, m, text, "—")
+        path, title, resolution, err = await _resolve_stream_url(text, m.chat.id, uid, m.id, True)
+        if not path:
+            await _del(status)
+            return await m.reply(_download_failed(uid, err))
+        await _del(status)
+        print("Playing {} in {}".format(path, m.chat.title))
+        await play_video(client, m, path, title, resolution=resolution)
     except Exception as exc:
         print(exc)
+        await _del(status)
         await m.reply(i18n.t(uid, "• پخش با مشکل مواجه شد !", "• Playback failed !"))
 
 
@@ -492,7 +578,7 @@ async def play_link(client, m: Message):
         return await m.reply(i18n.t(uid, "• گروه فاقد اعتبار میباشد !", "• The group has no credit !"))
     if uid not in access:
         return
-    text = utils.clean_command(m.text, "پخش لینک", "PlayLink").strip()
+    text = utils.clean_command(utils.msg_text(m), "پخش لینک", "PlayLink").strip()
     if "http" not in text:
         return await m.reply(i18n.t(uid, "• لینک معتبر نیست !", "• Invalid link !"))
     if await utils.checkjoin(client, m, uid) is not None:
@@ -501,11 +587,18 @@ async def play_link(client, m: Message):
         return
     if not await require_helper(uid, m):
         return
+    status = await m.reply(i18n.t(uid, "**⌯** در حال دریافت ... **⌯**", "**⌯** Fetching ... **⌯**"))
     try:
-        print("Playing {} in {}".format(text, m.chat.title))
-        await play_audio(client, m, text, "لینک")
+        path, title, _resolution, err = await _resolve_stream_url(text, m.chat.id, uid, m.id, False)
+        if not path:
+            await _del(status)
+            return await m.reply(_download_failed(uid, err))
+        await _del(status)
+        print("Playing {} in {}".format(path, m.chat.title))
+        await play_audio(client, m, path, title)
     except Exception as exc:
         print(exc)
+        await _del(status)
         await m.reply(i18n.t(uid, "• پخش با مشکل مواجه شد !", "• Playback failed !"))
 
 
@@ -824,28 +917,37 @@ async def youtube_search(client, m: Message):
         return
     if not await require_helper(uid, m):
         return
-    query = utils.clean_command(m.text, "سرچ یوتیوب", "YoutubeSearch").strip()
+    query = utils.clean_command(utils.msg_text(m), "سرچ یوتیوب", "YoutubeSearch").strip()
     if not query:
         return
+    status = await m.reply(
+        i18n.t(uid, "**⌯** در حال جستجو و دانلود از یوتیوب ... **⌯**",
+               "**⌯** Searching and downloading from YouTube ... **⌯**")
+    )
     try:
-        from youtubesearchpython import VideosSearch
-
-        # `.result()` performs a blocking HTTP request - running it directly
-        # stalls the whole event loop (every other chat freezes too).
-        def _search():
-            return VideosSearch(query, limit=1).result()["result"]
-
-        result = await asyncio.to_thread(_search)
-        if not result:
+        results = await utils.ytdlp_search(query, 1)
+        if not results:
+            await _del(status)
             return await m.reply(i18n.t(uid, "• ویدیویی یافت نشد !", "• No video found !"))
-        link = result[0]["link"]
-        direct = await utils.utub(link)
-        if not direct or "googlevideo.com" not in direct:
-            return await m.reply(i18n.t(uid, "عملیات دانلود با شکست مواجه شد !", "Download failed !"))
-        print("Playing {} in {}".format(direct, m.chat.title))
-        await play_video(client, m, direct, result[0].get("title", "YouTube"))
+        link = results[0]["url"]
+        title = results[0].get("title") or "YouTube"
+        # Download, then stream the local file. Feeding the resolved
+        # googlevideo URL straight to ffmpeg used to break: the URL expires,
+        # the old `best[...]` selector matched nothing for many videos and the
+        # `"googlevideo.com" not in direct` check rejected everything else.
+        path, why = await utils.ytdlp_download(
+            link, f"ytv_{m.chat.id}_{uid}_{m.id}", video=True
+        )
+        if not path:
+            await _del(status)
+            return await m.reply(_download_failed(uid, why))
+        await _del(status)
+        resolution, duration = await utils.probe_media(path)
+        print("Playing {} in {}".format(path, m.chat.title))
+        await play_video(client, m, path, title, resolution=resolution, duration=duration)
     except Exception as exc:
         print(exc)
+        await _del(status)
         await m.reply(i18n.t(uid, "• پخش با مشکل مواجه شد !", "• Playback failed !"))
 
 
@@ -863,23 +965,37 @@ async def youtube_play(client, m: Message):
         return
     if not await require_helper(uid, m):
         return
-    text = utils.clean_command(m.text, "پخش یوتیوب", "YoutubePlay").strip()
-    if "youtube.com/watch" not in text:
+    text = utils.clean_command(utils.msg_text(m), "پخش یوتیوب", "YoutubePlay").strip()
+    if not utils.is_youtube_link(text):
         return await m.reply(
             i18n.t(
                 uid,
-                "لینک وارد شده معتبر نیست !\nلینک باید به صورت زیر باشد :\n`https://www.youtube.com/watch?v=...`",
-                "The link is invalid !\nThe link must be like :\n`https://www.youtube.com/watch?v=...`",
+                "لینک وارد شده معتبر نیست !\nلینک باید به یکی از صورت‌های زیر باشد :\n"
+                "`https://www.youtube.com/watch?v=...`\n`https://youtu.be/...`",
+                "The link is invalid !\nThe link must look like one of :\n"
+                "`https://www.youtube.com/watch?v=...`\n`https://youtu.be/...`",
             )
         )
-    direct = await utils.utub(text)
-    if not direct or "googlevideo.com" not in direct:
-        return await m.reply(i18n.t(uid, "عملیات دانلود با شکست مواجه شد !", "Download failed !"))
+    status = await m.reply(
+        i18n.t(uid, "**⌯** در حال دانلود از یوتیوب ... **⌯**",
+               "**⌯** Downloading from YouTube ... **⌯**")
+    )
     try:
-        print("Playing {} in {}".format(direct, m.chat.title))
-        await play_video(client, m, direct, "YouTube")
+        info = await utils.ytdlp_info(text)
+        title = (info or {}).get("title") or "YouTube"
+        path, why = await utils.ytdlp_download(
+            text, f"ytv_{m.chat.id}_{uid}_{m.id}", video=True
+        )
+        if not path:
+            await _del(status)
+            return await m.reply(_download_failed(uid, why))
+        await _del(status)
+        resolution, duration = await utils.probe_media(path)
+        print("Playing {} in {}".format(path, m.chat.title))
+        await play_video(client, m, path, title, resolution=resolution, duration=duration)
     except Exception as exc:
         print(exc)
+        await _del(status)
         await m.reply(i18n.t(uid, "• پخش با مشکل مواجه شد !", "• Playback failed !"))
 
 
@@ -1132,11 +1248,20 @@ async def slash_play(client, m: Message):
     if arg.startswith("http"):
         if await utils.checkjoin(client, m, uid) is not None:
             return
+        status = await m.reply(i18n.t(uid, "**⌯** در حال دریافت ... **⌯**", "**⌯** Fetching ... **⌯**"))
         try:
-            print("Playing {} in {}".format(arg, m.chat.title))
-            await play_audio(client, m, arg, "لینک")
+            # a YouTube link handed straight to ffmpeg failed outright -
+            # ffmpeg has no YouTube demuxer, so it has to be resolved first.
+            path, title, _resolution, err = await _resolve_stream_url(arg, m.chat.id, uid, m.id, False)
+            if not path:
+                await _del(status)
+                return await m.reply(_download_failed(uid, err))
+            await _del(status)
+            print("Playing {} in {}".format(path, m.chat.title))
+            await play_audio(client, m, path, title)
         except Exception as exc:
             print(exc)
+            await _del(status)
             await m.reply(i18n.t(uid, "• پخش با مشکل مواجه شد !", "• Playback failed !"))
         return
 
@@ -1213,11 +1338,18 @@ async def slash_playvideo(client, m: Message):
     if arg.startswith("http"):
         if await utils.checkjoin(client, m, uid) is not None:
             return
+        status = await m.reply(i18n.t(uid, "**⌯** در حال دریافت ... **⌯**", "**⌯** Fetching ... **⌯**"))
         try:
-            print("Playing {} in {}".format(arg, m.chat.title))
-            await play_video(client, m, arg, "—")
+            path, title, resolution, err = await _resolve_stream_url(arg, m.chat.id, uid, m.id, True)
+            if not path:
+                await _del(status)
+                return await m.reply(_download_failed(uid, err))
+            await _del(status)
+            print("Playing {} in {}".format(path, m.chat.title))
+            await play_video(client, m, path, title, resolution=resolution)
         except Exception as exc:
             print(exc)
+            await _del(status)
             await m.reply(i18n.t(uid, "• پخش با مشکل مواجه شد !", "• Playback failed !"))
         return
 

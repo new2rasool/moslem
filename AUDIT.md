@@ -538,3 +538,113 @@ ALL TESTS PASSED      exit=0
 ```
 
 و بعد از اجرای کامل سوئیت، در درخت پروژه هنوز: `no .env` · `no database.sqlite` · `no sessions/helper.session`.
+
+---
+
+## ۱۴. دور سوم — فرمان‌های پخش و یوتیوب (Round 3)
+
+گزارش کاربر: «`پخش`، `پخش خودکار`، `پخش ویدیو` و `پخش خودکار ویدیو` ارور می‌دهند».
+بررسی با **پروب واقعی دیسپچر pyrogram** (نه خواندن چشمی regex) انجام شد؛ نتیجه این بود که
+مسئله یک باگ نیست بلکه **هشت باگ مستقل** است که روی هم مسیر پخش را می‌بندند.
+
+### ۱۴.۱ فهرست باگ‌ها و اصلاحات
+
+| # | باگ | مدرک | اصلاح |
+|---|------|------|-------|
+| **P1** | در `handlers/playback.py:306` هندلر `play_dedicate` با فیلتر `^(پخش )(?!لینک\|یوتیوب\|خودکار\|لیست)` ثبت شده و `filters.reply` هم دارد، ولی **قبل از** `playvideo_reply` و `playvideo_dedicate` ثبت می‌شود و `ویدیو`/`فایل` در lookahead نیست. نتیجه: وقتی کاربر به یک ویدیو **ریپلای** می‌کند و `پخش ویدیو` یا `پخش ویدیو @ali` می‌فرستد، پیام در `play_dedicate` می‌افتد و با خطای «کاربر مورد نظر یافت نشد» تمام می‌شود. | پروب دیسپچر: `پخش ویدیو`+reply → `play_dedicate` ❌ | افزودن `ویدیو\|فایل` به lookahead فارسی و `(?! ?[Vv]ideo\| ?[Ff]ile\|…)` به انگلیسی. پروب بعد از اصلاح: → `playvideo_reply` / `playvideo_dedicate` ✅ |
+| **P2** | `utils.utub()` فقط `yt-dlp`/`youtube-dl` را از روی `PATH` پیدا می‌کرد و `FileNotFoundError` را با `continue` می‌بلعید؛ در نهایت `""` برمی‌گرداند بدون هیچ تشخیص. `shutil.which("yt-dlp")` = **None** مگر اینکه `venv/bin` روی PATH باشد. | `/home/user/venv/bin/yt-dlp` وجود دارد ولی `shutil.which` آن را نمی‌بیند | `utils._find_exe()` = PATH + `dirname(sys.executable)`؛ `ytdlp_exe()`؛ `ffmpeg_missing()` |
+| **P2b** | انتخاب‌گر فرمت `best[height<=?720][width<=?1280]` فقط فرمت **ترکیبی** می‌خواهد و هیچ fallback ندارد → برای بسیاری از ویدیوهای یوتیوب stdout خالی. | — | زنجیرهٔ `YTDLP_FMT_VIDEO` با fallback به `bv*+ba` (مرج با ffmpeg) و در آخر `b` بدون قید |
+| **P3** | شرط `"googlevideo.com" not in direct` در `:843` و `:876` لینک‌های سالم را هم رد می‌کرد. | — | حذف شد |
+| **P4** | URL راه‌دور مستقیم به ffmpeg داده می‌شد: لینک‌های googlevideo ~۶ ساعت منقضی می‌شوند، `VideoParameters()` پیش‌فرض همه‌چیز را به **۶۴۰×۳۶۰** کوچک می‌کرد، و `AudioVideoPiped` هر دو پرچم را REQUIRED می‌کند. | `pytgcalls/ffmpeg.py:153 build_command` مستقیماً `ffmpeg -i "<path>"` می‌زند و **هیچ‌وقت** yt-dlp صدا نمی‌زند | `utils.ytdlp_download()` / `utils.download_url()` فایل را محلی می‌کنند؛ `probe_media()` رزولوشن واقعی را می‌دهد؛ تست تأیید می‌کند `1280x720` پروب‌شده جای ۶۴۰×۳۶۰ را می‌گیرد |
+| **P5** | `youtube_play` فقط زیررشتهٔ لفظی `youtube.com/watch` را می‌پذیرفت → `youtu.be/`، `/shorts/`، `/live/` و `music.youtube.com` رد می‌شدند. (`utils.is_youtube_link` که `youtu.be` را قبول می‌کرد اینجا اصلاً استفاده نمی‌شد.) | — | `utils.is_youtube_link()` بازتعریف شد و حالا در هندلر استفاده می‌شود |
+| **P6** | `utils.melobit_search` کوئری را مستقیم در URL می‌گذاشت: `f"{base}/search/song?query={query}&limit={limit}"`. yarl کاراکتر `#` را encode نمی‌کند → `query=rock+#1&limit=1` باعث می‌شود `#…` fragment شود و **`&limit=1` کاملاً گم شود**؛ `&` هم کوئری را می‌شکند. | با yarl تأیید شد | `session.get(url, params={...})` |
+| **P7** | `play_link_video` فقط دنبال رشتهٔ لفظی `.mp4`/`.mkv` در URL می‌گشت → `.webm`، `.mov`، لینک با query string و لینک یوتیوب همه «لینک دانلود ویدیو نیست» می‌گرفتند. | — | فقط `startswith("http")` لازم است، بقیه‌اش با دانلود واقعی تعیین می‌شود |
+| **P8** | `youtube-search-python` تنها منبع جستجو بود و HTML-scraping است. | **اجرا شد:** `VideosSearch("test").result()` → `TypeError: post() got an unexpected keyword argument 'proxies'` — یعنی این کتابخانه در محیط فعلی **کاملاً از کار افتاده** و `سرچ یوتیوب` بدون توجه به شبکه ۱۰۰٪ مرده بود | `utils.ytdlp_search()` اول از `ytsearch{n}:` خود yt-dlp استفاده می‌کند؛ `youtube-search-python` فقط fallback است |
+
+### ۱۴.۲ مسیرهای URL — یک نقطهٔ ورود مشترک
+
+پنج جا URL خام مستقیم به `play_audio`/`play_video` داده می‌شد (`پخش لینک`،
+`پخش لینک ویدیو`، `/play <url>`، `/playvideo <url>`، و شاخهٔ `text.startswith("http")`
+داخل `play_dedicate`). همه به `handlers.playback._resolve_stream_url()` وصل شدند:
+
+```
+_resolve_stream_url(url, chat_id, uid, msg_id, video)
+  ├─ is_youtube_link(url)  →  ytdlp_info() برای عنوان + ytdlp_download()
+  └─ در غیر این صورت       →  utils.download_url()  (با سقف MAX_LINK_BYTES = 300 MB)
+  └─ probe_media()  →  رزولوشن واقعی
+  → (path, title, resolution, error)
+```
+
+خطاها هم دیگر در یک پیام «Download failed !» گم نمی‌شوند: `_download_failed()` دلیل واقعی
+را برمی‌گرداند، مثلاً `yt-dlp is not installed` در برابر `ffmpeg is missing` در برابر
+`Video unavailable` — سه مشکل کاملاً متفاوت که قبلاً یک پیام یکسان داشتند.
+
+همچنین هر دو سازندهٔ استریم ویدیو (`play_video` و `play_dedicated_video`) وقتی رزولوشن
+داده نشده، فایل را پروب می‌کنند؛ در غیر این صورت `VideoParameters()` پیش‌فرض همهٔ ویدیوها
+را به ۶۴۰×۳۶۰ پایین می‌آورد.
+
+### ۱۴.۳ جدول مسیردهی بعد از اصلاح (پروب واقعی دیسپچر)
+
+```
+پیام                     reply  هندلر              قبل از اصلاح
+--------------------------------------------------------------
+پخش                       ✔     play_reply         —
+پخش @ali                  ✔     play_dedicate      —
+پخش ویدیو                 ✔     playvideo_reply    play_dedicate  ❌
+پخش ویدیو @ali            ✔     playvideo_dedicate play_dedicate  ❌
+پخش ویدیو @ali            ✘     playvideo_dedicate —
+پخش فایل …                ✘     play_file_cmd      —
+پخش لینک …                ✘     play_link          —
+پخش لینک ویدیو …          ✘     play_link_video    —
+پخش خودکار …              ✘     autoplay           —
+پخش یوتیوب …              ✘     youtube_play       —
+پخش لیست                  ✘     play_playlist      —
+سرچ …                     ✘     search_music       —
+سرچ یوتیوب …              ✘     youtube_search     —
+```
+
+> نکتهٔ مستندسازی: دستوری به نام **«پخش خودکار ویدیو» در سورس وجود ندارد**؛
+> `پخش خودکار` هندلر `autoplay` است و نسخهٔ ویدیویی ندارد. اگر کاربر این را می‌فرستاد،
+> با P1 در `play_dedicate` می‌افتاد و «کاربر یافت نشد» می‌گرفت. بعد از اصلاح به
+> `autoplay` با کوئری «خودکار ویدیو» می‌رود.
+
+### ۱۴.۴ تست جدید
+
+`tests/test_playback_youtube.py` — **۷۷ بررسی**، به‌عنوان هشتمین ورودی در `TESTS` افزوده شد.
+مهم‌ترین بخش آن یک **پروب واقعی دیسپچر** است (`app.dispatcher.groups` را پیمایش می‌کند و
+`h.filters(app, m)` را صدا می‌زند) تا مسیردهی فرمان‌ها واقعاً اجرا شود، نه اینکه regex
+چشمی خوانده شود.
+
+> دام پروب: در pyrogram 2.0.106 فیلتر `filters.reply` مقدار `bool(m.reply_to_message_id)`
+> را می‌سنجد، **نه** `m.reply_to_message`. اگر فقط آبجکت ریپلای ست شود، همهٔ هندلرهای
+> `filters.reply` مقدار False می‌دهند و پروب بدون هیچ خطایی نتیجهٔ غلط می‌دهد.
+
+### نتیجهٔ نهایی تست
+
+```
+$ python tests/run_all.py
+smoke_test             → PASSED  (144 هندلر در ۲ گروه)
+test_handlers          → 31/31
+test_auth              → 33/33
+test_layout            → 15/15
+test_panel_buttons     → 42/42
+test_stream_lifecycle  → 9/9
+test_regressions       → 55/55
+test_playback_youtube  → 77/77   ← جدید
+ALL TESTS PASSED       exit=0
+```
+
+`pyflakes` روی سورس ارسالی (بدون `tests/`): **۷ اخطار** که هیچ‌کدام خطای واقعی نیستند —
+۲ مورد `imported but unused` در `main.py:32,34` (ایمپورت با اثر جانبی برای ثبت هندلرها،
+که pyflakes نمی‌تواند تشخیص دهد) و ۵ مورد `assigned to but never used`
+(`admin_panel.py:40,41,820`، `auth.py:200`، `tasks.py:326`).
+هیچ `undefined name`، `redefinition` یا خطای واقعی دیگری وجود ندارد.
+(مقایسه با بیس‌لاین `89ced60`: ۳۶ اخطار.)
+
+### آنچه در این محیط قابل تست نبود
+
+ساندباکس خروجی شبکه ندارد، بنابراین **دانلود واقعی از یوتیوب و پخش واقعی در ویس‌چت
+تأیید نشده است**. آنچه تأیید شد: کشف باینری yt-dlp، ساخت درست فرمان yt-dlp، شکل
+URLهای ملوبیت، مسیردهی همهٔ فرمان‌ها، انتخاب رزولوشن، و اینکه همهٔ مسیرهای خطا به‌جای
+استثنا یک دلیل خوانا برمی‌گردانند (با URL غیرواقعی اجرا شد:
+`ERROR: [generic] x: Unable to download webpage: [Errno -2] Name or service not known`).
