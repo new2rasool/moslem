@@ -11,6 +11,7 @@ import i18n
 import utils
 from clients import call_py, helper_ready
 from pytgcalls.types.stream.legacy import AudioVideoPiped
+from pytgcalls.types.raw import VideoParameters
 
 cfg = config.get_config()
 OWNER = cfg.OWNER_ID
@@ -131,7 +132,15 @@ async def handle_tv(client, m: CallbackQuery, data: str):
             pass
         try:
             print("Playing {} in {}".format(path, m.message.chat.title))
-            await call_py.join_group_call(chat_id, AudioVideoPiped(path))
+            # A livestream cannot be downloaded and probed, so the resolution
+            # comes from the URL. Passing no VideoParameters made the legacy
+            # 640x360 default apply to every 720p channel.
+            # URL hint first (free, 11 of the 38 channels carry /720p/);
+            # otherwise probe the remote stream itself.
+            res = utils.stream_resolution(path) or await utils.probe_resolution(path)
+            stream = (AudioVideoPiped(path, video_parameters=VideoParameters(*res))
+                      if res else AudioVideoPiped(path))
+            await call_py.join_group_call(chat_id, stream)
             utils.mark_streaming(chat_id, "video", path)
         except Exception as exc:
             print(exc)

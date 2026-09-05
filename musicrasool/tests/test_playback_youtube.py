@@ -23,6 +23,7 @@ import os
 import sys
 
 import _bootstrap  # noqa: F401  (redirects .env/DB/downloads into a temp sandbox)
+from _bootstrap import PROJECT_ROOT
 
 # handler registration needs a running loop BEFORE the modules are imported
 loop = asyncio.new_event_loop()
@@ -391,6 +392,80 @@ def test_download_url_errors():
     check("MAX_LINK_BYTES cap is defined", utils.MAX_LINK_BYTES > 0)
 
 
+def test_real_media_probing():
+    """Exercise the REAL probe_resolution/probe_duration - no monkeypatching.
+
+    Both used to call a hard-coded `ffprobe` and swallow FileNotFoundError, so
+    on a machine without ffprobe on PATH they silently returned None: every
+    video fell back to the legacy 640x360 default and the early-end detector
+    had no duration to compare against. A previous version of this suite missed
+    that because it stubbed probe_media.
+    """
+    print("\n-- real ffprobe/ffmpeg probing (no stubs) --")
+    import subprocess
+    ff = utils.ffmpeg_exe()
+    if not ff:
+        print("  [SKIP] no ffmpeg available")
+        return
+    dl = config.get_config().DOWNLOAD_DIR
+    os.makedirs(dl, exist_ok=True)
+    for w, h in ((320, 240), (1280, 720), (640, 480)):
+        out = os.path.join(dl, f"probe_{w}x{h}.mp4")
+        subprocess.run([ff, "-y", "-f", "lavfi", "-i", f"testsrc=size={w}x{h}:rate=10:duration=1",
+                        "-f", "lavfi", "-i", "sine=frequency=440:duration=1",
+                        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", out],
+                       capture_output=True)
+        if not os.path.exists(out):
+            check(f"{w}x{h}: test clip could be generated", False)
+            continue
+        res = loop.run_until_complete(utils.probe_resolution(out))
+        dur = loop.run_until_complete(utils.probe_duration(out))
+        check(f"{w}x{h}: probe_resolution returns the real size", res == [w, h], f"got {res}")
+        check(f"{w}x{h}: probe_duration returns a real duration",
+              dur is not None and 0.5 < dur < 2.0, f"got {dur}")
+        os.remove(out)
+    src = inspect.getsource(utils.probe_resolution)
+    check("probe_resolution no longer hard-codes a bare 'ffprobe' tuple",
+          'for exe in ("ffprobe",)' not in src)
+    check("probe_resolution looks the binary up properly", "_find_exe" in src)
+    check("probe_resolution has an ffmpeg fallback", "_ffmpeg_banner" in src)
+
+
+def test_stream_resolution_hints():
+    print("\n-- live-stream resolution hints --")
+    for url, expected in [
+        ("https://cdn.telewebion.com/tv1/live/720p/index.m3u8", [1280, 720]),
+        ("https://x/live/1080p/index.m3u8", [1920, 1080]),
+        ("https://x/live/480p/index.m3u8", [854, 480]),
+        ("https://x/hls/stream.m3u8", None),
+        ("", None),
+        (None, None),
+    ]:
+        got = utils.stream_resolution(url)
+        check(f"stream_resolution({str(url)[:44]!r}) -> {expected}", got == expected, f"got {got}")
+    # every channel that carries /720p/ must not fall back to the 640x360 default
+    src = open(os.path.join(PROJECT_ROOT, "callbacks/tv.py"), encoding="utf-8").read()
+    check("TV channels pass a resolution instead of the 640x360 default",
+          "stream_resolution" in src and "VideoParameters(*res)" in src)
+
+
+def test_autoplay_video():
+    print("\n-- the missing 'پخش خودکار ویدیو' command --")
+    check("handlers.playback.autoplay_video exists", hasattr(pb, "autoplay_video"))
+    src = inspect.getsource(pb.autoplay_video)
+    check("autoplay_video searches YouTube", "ytdlp_search" in src)
+    check("autoplay_video downloads before streaming", "ytdlp_download" in src)
+    check("autoplay_video reports the real download reason", "_download_failed" in src)
+    check("autoplay_video uses video access control", "video_access" in src)
+    check("autoplay_video checks video credit", "insvideo" in src)
+    # the music autoplay must not swallow it any more
+    ap = inspect.getsource(pb)
+    check("autoplay's regex now excludes 'ویدیو'", "پخش خودکار)(?! ?ویدیو)" in ap)
+    # it must be registered BEFORE autoplay so it wins the prefix match
+    check("autoplay_video is registered before autoplay",
+          ap.index("async def autoplay_video") < ap.index("async def autoplay("))
+
+
 def main():
     print("=" * 60)
     print("PLAYBACK / YOUTUBE REGRESSION TESTS")
@@ -405,6 +480,9 @@ def main():
     test_play_link_video_accepts_any_container()
     test_youtube_search_and_play()
     test_download_url_errors()
+    test_real_media_probing()
+    test_stream_resolution_hints()
+    test_autoplay_video()
 
 
 main()

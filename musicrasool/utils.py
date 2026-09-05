@@ -641,9 +641,70 @@ async def utub(link: str) -> str:
     return out.split("\n")[0].strip()
 
 
+def ffmpeg_exe():
+    """Path to an ffmpeg binary: PATH, next to the interpreter, or imageio-ffmpeg.
+
+    `imageio-ffmpeg` ships a static ffmpeg but **no ffprobe**, which is why the
+    ffprobe-only probes below need an ffmpeg fallback.
+    """
+    found = _find_exe("ffmpeg")
+    if found:
+        return found
+    try:
+        import imageio_ffmpeg
+        cand = imageio_ffmpeg.get_ffmpeg_exe()
+        if cand and os.path.exists(cand):
+            return cand
+    except Exception:
+        pass
+    return None
+
+
+async def _ffmpeg_banner(path: str):
+    """Run `ffmpeg -i <path>` and return its stderr banner (it exits non-zero)."""
+    exe = ffmpeg_exe()
+    if not exe:
+        return ""
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            exe, "-hide_banner", "-i", path,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        _out, err = await asyncio.wait_for(proc.communicate(), 60)
+    except Exception:
+        return ""
+    return err.decode(errors="ignore")
+
+
+def stream_resolution(url: str):
+    """Best-effort [width, height] for a live-stream URL, or None.
+
+    A livestream cannot be downloaded and probed first, so the resolution is
+    read from the URL (`.../720p/index.m3u8`). Without this, `AudioVideoPiped`
+    fell back to the legacy VideoParameters() default and every 720p channel
+    was downscaled to 640x360.
+    """
+    m = re.search(r"(\d{3,4})p", str(url or "").lower())
+    if not m:
+        return None
+    h = int(m.group(1))
+    if not 144 <= h <= 4320:
+        return None
+    return [int(round(h * 16 / 9 / 2.0)) * 2, h]
+
+
 async def probe_resolution(path: str):
-    """Return [width, height] of a local video via ffprobe, or None."""
-    for exe in ("ffprobe",):
+    """Return [width, height] of a video, or None.
+
+    Both probes used to call a hard-coded `ffprobe` and swallow
+    FileNotFoundError, so on any machine without ffprobe on PATH they silently
+    returned None: every video was streamed at the legacy 640x360 default and
+    the early-end detector had no duration to work with. ffprobe is now looked
+    up properly and ffmpeg's banner is used as a fallback.
+    """
+    exe = _find_exe("ffprobe")
+    if exe:
         try:
             proc = await asyncio.create_subprocess_exec(
                 exe, "-v", "error", "-select_streams", "v:0",
@@ -657,16 +718,27 @@ async def probe_resolution(path: str):
             if out and "x" in out:
                 w, h = out.split("x")[:2]
                 return [int(w), int(h)]
-        except FileNotFoundError:
-            continue
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("ffprobe failed for %s: %s", path, exc)
+    # fallback: `Video: h264 ..., 1280x720 [...]` in the ffmpeg banner
+    banner = await _ffmpeg_banner(path)
+    for line in banner.splitlines():
+        if "Video:" in line:
+            m = re.search(r"(\d{2,5})x(\d{2,5})", line)
+            if m:
+                return [int(m.group(1)), int(m.group(2))]
     return None
 
 
 async def probe_duration(path: str):
-    """Return the media duration in seconds via ffprobe, or None."""
-    for exe in ("ffprobe",):
+    """Return the media duration in seconds, or None.
+
+    See probe_resolution: the hard-coded `ffprobe` call silently returned None
+    on machines without it, which made the early-end detector treat a normally
+    long song as a failure.
+    """
+    exe = _find_exe("ffprobe")
+    if exe:
         try:
             proc = await asyncio.create_subprocess_exec(
                 exe, "-v", "error", "-show_entries", "format=duration",
@@ -680,11 +752,16 @@ async def probe_duration(path: str):
                 try:
                     return float(out)
                 except ValueError:
-                    return None
-        except FileNotFoundError:
-            continue
-        except Exception:
-            pass
+                    pass
+        except Exception as exc:
+            logger.debug("ffprobe duration failed for %s: %s", path, exc)
+    # fallback: `Duration: 00:00:07.31,` in the ffmpeg banner. Live streams
+    # report `Duration: N/A`, which correctly stays None.
+    banner = await _ffmpeg_banner(path)
+    m = re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)", banner)
+    if m:
+        h, mi, sec = m.groups()
+        return int(h) * 3600 + int(mi) * 60 + float(sec)
     return None
 
 

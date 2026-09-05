@@ -35,6 +35,8 @@ original has been preserved — and everything now actually works.
 - `پخش یوتیوب` / `YoutubePlay` — play a YouTube link (`watch`, `youtu.be`,
   `shorts`, `live`, `music.youtube`); downloaded with yt-dlp at ≤720p
 - `سرچ یوتیوب` / `YoutubeSearch` — search YouTube and play the result
+- `پخش خودکار ویدیو <name>` / `AutoPlayVideo <name>` — search YouTube and play
+  the first video (the video counterpart of `پخش خودکار`)
 - `توقف ویدیو` / `StopVideo` · `صدای ویدیو` / `VideoSound`
 
 ### ⌨️ Slash commands (also accepted)

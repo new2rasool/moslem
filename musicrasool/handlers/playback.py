@@ -840,7 +840,65 @@ async def search_music(client, m: Message):
 # ----------------------------------------------------------------------
 # پخش خودکار / autoplay (Melobit search -> play)
 # ----------------------------------------------------------------------
-@app.on_message(filters.group & (filters.regex(r"^(پخش خودکار)") | filters.regex(r"^([Aa][Uu][Tt][Oo][Pp][Ll][Aa][Yy])")))
+# Must be registered BEFORE `autoplay`: pyrogram matches handlers in
+# registration order inside a group, and `autoplay`'s regex is the bare prefix
+# `^(پخش خودکار)`. Without this handler (and without the `ویدیو` entry in
+# `autoplay`'s lookahead) the command `پخش خودکار ویدیو` was swallowed by the
+# music autoplay handler and came back as "the requested song was not found".
+@app.on_message(filters.group & (
+    filters.regex(r"^(پخش خودکار ویدیو)")
+    | filters.regex(r"^([Aa][Uu][Tt][Oo][Pp][Ll][Aa][Yy] ?[Vv][Ii][Dd][Ee][Oo])")
+))
+async def autoplay_video(client, m: Message):
+    """`پخش خودکار ویدیو <query>` - search YouTube and play the first video."""
+    uid = m.from_user.id
+    horn = [*database.kir(1), *database.kir(0)]
+    access = utils.video_access(m.chat.id, uid)
+    if m.chat.id not in horn and uid in access:
+        return await m.reply(i18n.t(uid, "• گروه فاقد اعتبار میباشد !", "• The group has no credit !"))
+    if uid not in access:
+        return
+    if await utils.checkjoin(client, m, uid) is not None:
+        return
+    if m.chat.id not in database.insvideo():
+        return
+    if not await require_helper(uid, m):
+        return
+    query = utils.clean_command(utils.msg_text(m), "پخش خودکار ویدیو", "AutoPlayVideo").strip()
+    if not query:
+        return await m.reply(
+            i18n.t(uid, "• لطفا نام ویدیو را هم بنویسید !\nمثال : `پخش خودکار ویدیو آهنگ ...`",
+                      "• Please include the video name too !\nExample: `AutoPlayVideo <name>`")
+        )
+    status = await m.reply(
+        i18n.t(uid, "**⌯** درحال جستجو و دانلود ویدیو **....**\n┈┅───┤🔎├───┅┈",
+               "**⌯** Searching and downloading the video **....**\n┈┅───┤🔎├───┅┈")
+    )
+    try:
+        results = await utils.ytdlp_search(query, 1)
+        if not results:
+            await _del(status)
+            return await m.reply(i18n.t(uid, "• ویدیوی مورد نظر یافت نشد !", "• The requested video was not found !"))
+        link = results[0]["url"]
+        title = results[0].get("title") or "YouTube"
+        path, why = await utils.ytdlp_download(link, f"autov_{m.chat.id}_{uid}_{m.id}", video=True)
+        if not path:
+            await _del(status)
+            return await m.reply(_download_failed(uid, why))
+        await _del(status)
+        resolution, duration = await utils.probe_media(path)
+        print("Playing {} in {}".format(path, m.chat.title))
+        await play_video(client, m, path, title, resolution=resolution, duration=duration)
+    except Exception as exc:
+        print(exc)
+        await _del(status)
+        await m.reply(i18n.t(uid, "• پخش با مشکل مواجه شد !", "• Playback failed !"))
+
+
+@app.on_message(filters.group & (
+    filters.regex(r"^(پخش خودکار)(?! ?ویدیو)")
+    | filters.regex(r"^([Aa][Uu][Tt][Oo][Pp][Ll][Aa][Yy])(?! ?[Vv][Ii][Dd][Ee][Oo])")
+))
 async def autoplay(client, m: Message):
     uid = m.from_user.id
     horn = [*database.moz(1), *database.moz(0)]
