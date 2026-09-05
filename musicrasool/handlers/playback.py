@@ -13,7 +13,7 @@ import config
 import database
 import i18n
 import utils
-from clients import app, call_py, ubot, helper_ready
+from clients import app, call_py, helper_ready
 from pytgcalls.types.stream.legacy import AudioPiped, AudioVideoPiped
 from pytgcalls.types.raw import VideoParameters
 

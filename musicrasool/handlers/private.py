@@ -2,7 +2,6 @@
 Private-chat handlers: /start, /language, /login (helper account),
 /restart and the owner/sudo reply-keyboard panel.
 """
-import asyncio
 import os
 import sys
 

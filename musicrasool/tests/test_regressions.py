@@ -216,6 +216,52 @@ async def main():
     helper_hs = _handlers_for("helper_ping")
     check("H3 helper_ping is still registered", len(helper_hs) == 1)
 
+    # the ping card must stay ONE message and report MEASURED numbers
+    import datetime
+    import re as _re2
+    # check the AST, not the text - the explanatory comment in ping_cmd
+    # mentions the old random.choice() on purpose
+    import ast
+
+    def _calls_random_choice(fn):
+        tree = ast.parse(inspect.getsource(fn))
+        for node in ast.walk(tree):
+            if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "choice"
+                    and isinstance(node.func.value, ast.Name)
+                    and node.func.value.id == "random"):
+                return True
+        return False
+
+    check("H3 ping no longer invents latency with random.choice",
+          not _calls_random_choice(handlers.misc.ping_cmd)
+          and not _calls_random_choice(handlers.misc.helper_ping))
+
+    fm3 = FakeMessage(text="پینگ")
+    fm3.date = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=0.4)
+    cards = []
+
+    async def _reply_card(text, **kw):
+        ed = FakeEditable()
+        cards.append(ed)
+        return ed
+
+    fm3.reply = _reply_card
+    asyncio.sleep = fast_sleep
+    try:
+        try:
+            await handlers.misc.ping_cmd(None, fm3)
+        except pyrogram.ContinuePropagation:
+            pass
+    finally:
+        asyncio.sleep = real_sleep
+    check("ping sends exactly one card (edited in place)", len(cards) == 1)
+    final = cards[0].edits[-1] if cards and cards[0].edits else ""
+    nums = _re2.findall(r"(\d+\.\d{3})", final)
+    check("ping shows two measured latencies with 3 decimals", len(nums) == 2)
+    check("ping 'receive' latency comes from the update timestamp",
+          bool(nums) and 0.3 <= float(nums[0]) < 5.0)
+
     # ==================================================================
     # H5 - backtv must edit the panel, not delete-then-reply
     # ==================================================================
@@ -370,10 +416,25 @@ async def main():
     # C2 / C3 / I2 - no shipped secrets, no placeholder .env, ffmpeg wiring
     # ==================================================================
     example = open(os.path.join(PROJECT_ROOT, ".env.example"), encoding="utf-8").read()
+    # The literals below are the credentials that moslem.zip actually shipped.
+    # They are repeated here on purpose: this test is the guard that proves
+    # they can never be reintroduced. They must still be revoked via
+    # @BotFather - removing them from a test does not un-leak them.
     leaked = ["8053868457", "9c9fe04dc2a85e9dd74208335c537f1a", "918990"]
     found = [s for s in leaked if s in example]
     check("C2 .env.example ships no real credentials", found == [])
     check("C2 .env.example uses placeholders", "PUT_YOUR_BOT_TOKEN_HERE" in example)
+    # structural: no key may carry a real-looking value
+    real_values = []
+    for line in example.splitlines():
+        if "=" not in line or line.lstrip().startswith("#"):
+            continue
+        key, _, value = line.partition("=")
+        value = value.strip()
+        if value and "PUT_YOUR_" not in value and value not in ("fa", "en", "downloads"):
+            real_values.append(key.strip())
+    check("C2 no key in .env.example holds a real-looking value",
+          real_values == [])
 
     for script in ("install.sh", "install.bat"):
         body = open(os.path.join(PROJECT_ROOT, script), encoding="utf-8").read()
@@ -421,6 +482,49 @@ async def main():
     i18n.switch_lang(UID, "fa")
     database.execute("DELETE FROM users")
     i18n.forget_lang(UID)
+
+    # ==================================================================
+    # docs vs reality: every command the help panels advertise must have a
+    # handler. At audit time 4 of 79 (بیصدا/باصدا/silent/unsilent) had none.
+    # ==================================================================
+    import re as _re3
+    help_src = open(os.path.join(PROJECT_ROOT, "callbacks", "help.py"),
+                    encoding="utf-8").read()
+    documented = set()
+    for mm in _re3.finditer(r"✧\s*`([^`]+)`", help_src):
+        tok = mm.group(1).strip()
+        if tok.startswith("/"):
+            tok = tok[1:]
+        if tok and not tok.startswith("http"):
+            documented.add(tok.lower())
+
+    def _alternatives(pattern):
+        out = []
+        for part in _re3.split(r"\|", pattern):
+            part = _re3.sub(r"\(\?<?[=!][^)]*\)", "", part)      # lookarounds first
+            part = part.strip().strip("^$")
+            part = _re3.sub(r"^\((.*)\)$", r"\1", part).strip("^$")
+            part = _re3.sub(r"\[([A-Za-z])[A-Za-z]\]", r"\1", part)
+            part = part.replace("(", "").replace(")", "").replace("^", "").replace("$", "")
+            if part and _re3.fullmatch(r"[A-Za-z\u0600-\u06FF ]+", part):
+                out.append(part.strip().lower())
+        return out
+
+    implemented = set()
+    for _root, _dirs, _files in os.walk(PROJECT_ROOT):
+        _dirs[:] = [d for d in _dirs if d not in
+                    ("__pycache__", ".git", "venv", "downloads", "sessions", "tests")]
+        for _fn in _files:
+            if not _fn.endswith(".py"):
+                continue
+            _line_src = open(os.path.join(_root, _fn), encoding="utf-8").read()
+            for _pat in _re3.findall(r'filters\.regex\(r"([^"]*)"', _line_src):
+                implemented.update(_alternatives(_pat))
+    missing = sorted(documented - implemented)
+    check(f"docs: all {len(documented)} documented commands have a handler",
+          missing == [])
+    if missing:
+        print("   -> missing:", missing)
 
     now_fa = utils.jalali_now()
     check("jalali_now renders a Persian weekday",

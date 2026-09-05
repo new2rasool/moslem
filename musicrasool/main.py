@@ -6,7 +6,6 @@ PyTgCalls, launches the background tasks and blocks until stopped.
 """
 import asyncio
 import logging
-import sys
 
 from pyrogram import idle
 

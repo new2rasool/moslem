@@ -8,8 +8,7 @@ import os
 import time
 
 from pyrogram import enums, filters
-from pyrogram.errors.exceptions.bad_request_400 import MessageEmpty
-from pyrogram.types import ChatPrivileges, Message
+from pyrogram.types import Message
 
 import config
 import database
@@ -997,7 +996,6 @@ async def exemption_list(client, m: Message):
 @app.on_message(filters.user(OWNER) & filters.regex(r"^پاکسازی$"))
 async def clear_downloads(client, m: Message):
     uid = m.from_user.id
-    import shutil
     try:
         # `downloads/<chat_id>/<title>.mp3` files are referenced by the
         # `playlist` table (add_to_playlist). Deleting them used to leave the

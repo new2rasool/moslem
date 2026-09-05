@@ -127,7 +127,6 @@ def _start_markup(uid, info, channel_link):
 
 async def _refresh_start(client, m: CallbackQuery):
     """Re-render the start message after a language switch."""
-    from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
     info = database.info() or {}
     ch_rows = database.channel()
     channel_link = ch_rows[0][2] if ch_rows else "https://t.me/fnvhfdmnfhjkc"

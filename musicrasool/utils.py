@@ -11,7 +11,6 @@ import asyncio
 import logging
 import os
 import re
-import subprocess
 import time
 
 import jdatetime
@@ -120,11 +119,19 @@ def owners_ids():
 
 
 def music_access(chat_id, user_id=None):
+    """Every user id allowed to run music commands in `chat_id`.
+
+    `user_id` is accepted but deliberately unused: the lists below already
+    contain every per-chat and global music role, so the requester's own id
+    adds nothing. It is kept so the 22 existing `music_access(chat_id, uid)`
+    call sites stay valid.
+    """
     return [*database.idsudos(), *database.idowner(), *database.idmusic(chat_id),
             *database.creators(chat_id), cfg.SUDO_ID, cfg.OWNER_ID, *database.allmusic()]
 
 
 def video_access(chat_id, user_id=None):
+    """Same as `music_access` for video commands; `user_id` is unused (see above)."""
     return [*database.idsudos(), *database.idowner(), *database.idvideo(chat_id),
             *database.creators(chat_id), cfg.SUDO_ID, cfg.OWNER_ID, *database.allvideo()]
 

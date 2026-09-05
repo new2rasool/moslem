@@ -9,7 +9,7 @@ import config
 import database
 import i18n
 import utils
-from clients import app, call_py, helper_ready
+from clients import call_py, helper_ready
 from pytgcalls.types.stream.legacy import AudioVideoPiped
 
 cfg = config.get_config()

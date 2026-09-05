@@ -5,10 +5,8 @@ All original tables are kept with identical semantics. A single
 connection guarded by a lock is used (sqlite3 is not async-safe),
 so every read/write goes through short, lock-protected calls.
 """
-import os
 import sqlite3
 import threading
-import time
 
 import config
 

@@ -10,7 +10,7 @@ import config
 import database
 import i18n
 import utils
-from clients import app, call_py
+from clients import call_py
 
 cfg = config.get_config()
 OWNER = cfg.OWNER_ID

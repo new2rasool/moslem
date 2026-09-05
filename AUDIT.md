@@ -412,8 +412,8 @@ RUN: tests/test_auth.py             → 33/33  PASSED   (+۳ بررسی جدید
 RUN: tests/test_layout.py           → 15/15  PASSED
 RUN: tests/test_panel_buttons.py    → 42/42  PASSED
 RUN: tests/test_stream_lifecycle.py → 9/9    PASSED   (قبلاً 8/9)
-RUN: tests/test_regressions.py      → 49/49  PASSED   (فایل جدید)
-ALL TESTS PASSED      exit=0
+RUN: tests/test_regressions.py      → 55/55  PASSED   (فایل جدید)
+ALL TESTS PASSED      exit=0        (مجموعاً ۱۸۵ بررسی در ۷ فایل)
 ```
 
 **مهم:** قبل از اصلاح، اجرای سوئیت `.env` و دیتابیس تولید را پاک می‌کرد.
@@ -451,7 +451,7 @@ ALL TESTS PASSED      exit=0
 | **I2** symlink با نام hardcode | ✅ اصلاح شد | مسیر از `imageio_ffmpeg.get_ffmpeg_exe()` پرسیده می‌شود (`ffmpeg-linux-x86_64-v7.0.2` حذف شد). |
 | **I3** ویندوز: ffmpeg روی PATH نمی‌رفت | ✅ اصلاح شد | `install.bat` حالا باینری را به `venv\Scripts\ffmpeg.exe` کپی می‌کند و در صورت شکست هشدار می‌دهد. تأیید شد که **هیچ کجای پایتون** `get_ffmpeg_exe()` را صدا نمی‌زند، پس PATH تنها راه است. |
 | **D** کد مرده | ✅ بخشی اصلاح شد | دو شاخهٔ غیرقابل‌دسترس `callbacks/player.py` (`"a"`، `"clzz"` — `router.py:68/72` زودتر برمی‌گردند) حذف و دلیلش مستند شد؛ import مردهٔ `helper_session_exists`/`AudioVideoPiped` از `handlers/tv.py` حذف شد. `backma` دیگر مرده نیست: دکمهٔ «بازگشت» کارت پخش ماهواره‌ای قبلاً `backtv` می‌فرستاد و کاربر را به لیست **ملی** می‌برد؛ حالا بر اساس `NATIONAL` بین `backtv`/`backma` انتخاب می‌کند. `helper_ok` در `main.py` هم دیگر بی‌استفاده نیست. |
-| **پوشش تست** | ✅ اصلاح شد | `tests/test_regressions.py` با ۴۹ بررسی برای H1/H3/H5/H6/H7/H8/H11/H12/S1/S2/C2/C3/I2/R و در `run_all.py` ثبت شد. `FakeMessage.continue_propagation()` دقیقاً مثل `Update.continue_propagation()` عمل می‌کند. |
+| **پوشش تست** | ✅ اصلاح شد | `tests/test_regressions.py` با ۵۵ بررسی برای H1/H3/H5/H6/H7/H8/H11/H12/S1/S2/C2/C3/I2/R و در `run_all.py` ثبت شد. `FakeMessage.continue_propagation()` دقیقاً مثل `Update.continue_propagation()` عمل می‌کند. |
 | **اسناد در برابر واقعیت** | ✅ اصلاح شد | `README.md`: جدول تست‌ها و شمارش‌ها (۱۴۴ هندلر، ۳۳ auth، ۴۹ رگرسیون)، `Gem* (9 channels)` به‌جای ۱۱، و شفاف‌سازی سقف ۵۰ مگابایت آپلود بات. `INSTALL.md`: رفتار واقعی ffmpeg در هر دو پلتفرم، رفتار placeholder در `.env`، پیام `helper is NOT online`. |
 
 ### مواردی که عمداً اصلاح **نشد**
@@ -460,3 +460,81 @@ ALL TESTS PASSED      exit=0
 - **همگام‌بودن همهٔ فراخوانی‌های SQLite داخل هندلرهای async** — انتقال به `aiosqlite` کل لایهٔ `database.py` و هر ۱۵۰+ فراخوانی را عوض می‌کند. با ایندکس‌های جدید و کش `i18n` فشار اصلی برداشته شد، ولی خودِ موضوع باز است.
 - **۱۵۱ استفادهٔ `m.from_user.id`** — در pyrogram برای پیام عادی `from_user` هیچ‌وقت `None` نیست؛ فقط ۸ نقطه گارد داشتند و همان‌ها کافی است.
 - **دسترس‌پذیری Melobit / telewebion / لینک‌های HLS** — در این سندباکس egress وجود ندارد؛ همچنان **تأییدنشده** است.
+
+
+---
+
+## ۱۳) دور دوم — پاک‌سازی و موارد جامانده
+
+بعد از کامیت اول، یک پاس lint و بازبینی مجدد انجام شد.
+
+### lint (pyflakes) روی کل درخت
+
+| | تعداد |
+|---|---|
+| قبل از هر پاک‌سازی (ایمپورت دست‌نخورده) | **۳۶** |
+| بعد از پاک‌سازی | **۲۱** |
+
+مقایسهٔ قبل/بعد نشان داد اصلاحات دور اول **دو import بلااستفاده** به‌جا گذاشته بودند که الان حذف شدند:
+
+- `handlers/group_admin.py` → `import shutil` (بعد از بازنویسی `clear_downloads` دیگر `rmtree` استفاده نمی‌شد)
+- `handlers/playback.py` → `ubot` (بعد از حذف رفت‌وبرگشت Saved Messages)
+
+و این‌ها **به‌عنوان اثر جانبی** درست شدند: `status` بلااستفاده در `callbacks/player.py`، هر دو import مردهٔ `handlers/tv.py`، `helper_ok` بلااستفاده در `main.py`، `utils` بلااستفاده در `admin_panel.py`.
+
+۲۱ مورد باقی‌مانده همه از دو دستهٔ بی‌ضررند و **عمداً** نگه داشته شدند:
+import‌های دارای اثر جانبی که هندلرها را ثبت می‌کنند (`handlers.misc`، `callbacks.events`، `tasks`، `_bootstrap` و…) — حذفشان بات را می‌شکند — و چند متغیر محلی بی‌استفاده.
+
+### پینگ: عدد واقعی به‌جای `random.choice`
+
+`handlers/misc.py:44-45` و `:68-69` هر دو عدد را با `random.choice([...])` تولید می‌کردند؛ یعنی کارت پینگ **تأخیر ساختگی** را به‌عنوان عدد واقعی نشان می‌داد.
+
+- `↓ دریافت` = `time.time() - m.date.timestamp()` → تأخیر واقعی رسیدن update
+- `↑ ارسال` = زمان واقعیِ `await m.reply(...)` برای بات، و یک round-trip واقعی MTProto (`ubot.get_me()`) برای هلپر
+- اگر هلپر پاسخ ندهد، به‌جای عدد جعلی پیام خطا می‌آید
+- کارت **همان یک پیام** باقی ماند (حین اصلاح یک لحظه دو پیام می‌شد که برگردانده شد)
+
+### `music_access` / `video_access` — پارامتر `user_id`
+
+**عمداً حذف نشد.** ۲۲ فراخوانی `(chat_id, uid)` می‌دهند و حذفش ۲۲ ویرایش پرریسک با صفر تغییر رفتار است؛ در عوض docstring اضافه شد که چرا بلااستفاده است.
+
+### بررسی «راهنما در برابر پیاده‌سازی» — حالا صفر
+
+هر ۷۹ دستورِ مستندشده در `callbacks/help.py` (الگوی ``✧ `cmd` ``) با تک‌تک alternative‌های `filters.regex` در هندلرها مقایسه شد:
+
+```
+documented commands            : 79
+implemented tokens             : 158
+documented but NOT implemented : 0        (در زمان بازبینی: ۴)
+```
+
+⚠️ یک نکتهٔ روش‌شناختی: نسخهٔ اول این بررسی **۳ مورد غلط** (`سرچ`، `پخش لینک`، `playlink`) گزارش کرد، چون lookaroundها را *بعد از* حذف گروهِ پوششی strip می‌کرد و `(?! یوتیوب)` / `(?! ?[Vv]ideo)` را به حرفِ بدنهٔ دستور می‌چسباند. ترتیب درست (اول lookaround، بعد `^…$` و گروه پوششی، بعد `[Xx]`) صفر می‌دهد. این بررسی به‌صورت تست دائمی در `test_regressions.py` ثبت شد تا دوباره خراب نشود.
+
+### جدول dead code — وضعیت نهایی
+
+| مورد | وضعیت |
+|---|---|
+| `callbacks/player.py:36-44` (`data=="a"`) | ✅ حذف شد |
+| `callbacks/player.py:179-187` (`clzz`) | ✅ حذف شد |
+| `callbacks/tv.py:117 backma` | ✅ دیگر مرده نیست (دکمهٔ بازگشت ماهواره) |
+| `main.py:81 helper_ok` | ✅ استفاده می‌شود (`set_helper_online`) |
+| `handlers/tv.py:10 AudioVideoPiped` + `helper_session_exists` | ✅ حذف شد |
+| `misc.py:44-45` پینگ ساختگی | ✅ عدد واقعی |
+| `user_id` در `music_access`/`video_access` | ⏸️ عمداً نگه داشته شد (docstring) |
+| جدول `chnl` با `statuschnl` | ⏸️ فقط در SCHEMA است و هیچ‌جا خوانده/نوشته نمی‌شود؛ حذفش سودی ندارد و ریسک دارد |
+
+### نتیجهٔ نهایی تست
+
+```
+$ python tests/run_all.py
+smoke_test            → PASSED  (144 هندلر در ۲ گروه)
+test_handlers         → 31/31
+test_auth             → 33/33
+test_layout           → 15/15
+test_panel_buttons    → 42/42
+test_stream_lifecycle → 9/9
+test_regressions      → 55/55
+ALL TESTS PASSED      exit=0
+```
+
+و بعد از اجرای کامل سوئیت، در درخت پروژه هنوز: `no .env` · `no database.sqlite` · `no sessions/helper.session`.

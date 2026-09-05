@@ -11,7 +11,7 @@ import config
 import database
 import i18n
 import utils
-from clients import app, call_py, ubot, helper_ready
+from clients import app, ubot, helper_ready
 
 cfg = config.get_config()
 OWNER = cfg.OWNER_ID

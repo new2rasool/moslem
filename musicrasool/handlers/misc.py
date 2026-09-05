@@ -2,8 +2,10 @@
 Misc handlers: help panel, ping, bot status, reply media setting,
 easter eggs (card / man), and new-chat-member auto promote / ban.
 """
+import asyncio
 import os
 import random
+import time
 
 from pyrogram import enums, filters
 from pyrogram.types import ChatPrivileges, Message
@@ -38,20 +40,48 @@ async def help_cmd(client, m: Message):
 # ----------------------------------------------------------------------
 # پینگ / ping
 # ----------------------------------------------------------------------
+def _update_latency(m) -> str:
+    """Seconds between Telegram timestamping the message and us handling it."""
+    date = getattr(m, "date", None)
+    if date is None:
+        return "-"
+    try:
+        return f"{max(0.0, time.time() - date.timestamp()):.3f}"
+    except Exception:
+        return "-"
+
+
+async def _ping_card(m, uid, title_fa, title_en, recv, send=None):
+    """The original progressive 'ping' card, but with measured numbers.
+
+    Sends exactly ONE message and edits it, like the original. When `send` is
+    None the send latency is measured from this card's own first reply.
+    """
+    head_fa = f"**⋆ {title_fa} !**"
+    head_en = f"**⋆ {title_en} !**"
+    lines_fa = f"{head_fa}\n◍ زمان های سپری شده **:**"
+    lines_en = f"{head_en}\n◍ Elapsed times **:**"
+    started = time.monotonic()
+    am = await m.reply(i18n.t(uid, head_fa, head_en))
+    if send is None:
+        send = f"{time.monotonic() - started:.3f}"
+    await asyncio.sleep(0.2)
+    await am.edit(i18n.t(uid, lines_fa, lines_en))
+    await asyncio.sleep(0.2)
+    await am.edit(i18n.t(uid, f"{lines_fa}\n↓ دریافت ·۰• {recv} ثانیه",
+                         f"{lines_en}\n↓ Receive ·۰• {recv}s"))
+    await asyncio.sleep(0.2)
+    await am.edit(i18n.t(uid, f"{lines_fa}\n↓ دریافت ·۰• {recv} ثانیه\n↑ ارسال ·۰•  {send} ثانیه",
+                         f"{lines_en}\n↓ Receive ·۰• {recv}s\n↑ Send ·۰•  {send}s"))
+
+
 @app.on_message(filters.group & (filters.regex(r"^(پینگ)$") | filters.regex(r"^([Pp][Ii][Nn][Gg])$")))
 async def ping_cmd(client, m: Message):
     uid = m.from_user.id
-    send = random.choice([1, 0.8, 0.2, 0.03, 0.026, 0.142, 0.68, 0.092, 0.099, 0.6, 0.4, 0.02, 0.09, 0.23, 0.506, 0.19, 0.306, 0.225, 0.009, 0.208, 0.04, 0.014, 0.13, 0.71, 0.29, 0.91, 0.66, 0.07])
-    recive = random.choice([0.012, 0.05, 0.021, 0.032, 0.066, 0.011, 0.09, 0.06, 0.057, 0.063, 0.091, 0.031, 0.08, 0.07, 0.0718, 0.0645, 0.015, 0.042, 0.069, 0.085])
-    import asyncio
-    await asyncio.sleep(0.5)
-    am = await m.reply(i18n.t(uid, "**⋆ ربات هم اکنون آنلاین میباشد !**", "**⋆ The bot is online now !**"))
-    await asyncio.sleep(0.2)
-    await am.edit(i18n.t(uid, "**⋆ ربات هم اکنون آنلاین میباشد !**\n◍ زمان های سپری شده **:**", "**⋆ The bot is online now !**\n◍ Elapsed times **:**"))
-    await asyncio.sleep(0.2)
-    await am.edit(i18n.t(uid, f"**⋆ ربات هم اکنون آنلاین میباشد !**\n◍ زمان های سپری شده **:**\n↓ دریافت ·۰• {recive} ثانیه", f"**⋆ The bot is online now !**\n◍ Elapsed times **:**\n↓ Receive ·۰• {recive}s"))
-    await asyncio.sleep(0.2)
-    await am.edit(i18n.t(uid, f"**⋆ ربات هم اکنون آنلاین میباشد !**\n◍ زمان های سپری شده **:**\n↓ دریافت ·۰• {recive} ثانیه\n↑ ارسال ·۰•  {send} ثانیه", f"**⋆ The bot is online now !**\n◍ Elapsed times **:**\n↓ Receive ·۰• {recive}s\n↑ Send ·۰•  {send}s"))
+    recv = _update_latency(m)
+    # measured, not random: both numbers used to come from random.choice(),
+    # so the card reported invented latencies as if they were real.
+    await _ping_card(m, uid, "ربات هم اکنون آنلاین میباشد", "The bot is online now", recv)
     # `helper_ping` below matches the very same filters and lives in the same
     # handler group. Without this the dispatcher stops after the first match
     # and the helper ping could never be reached.
@@ -64,17 +94,17 @@ async def helper_ping(client, m: Message):
     from clients import ubot, helper_ready
     if not helper_ready():
         return
-    import asyncio
-    send = random.choice([0.8, 0.2, 0.03, 0.026, 0.142, 0.68, 0.092, 0.099, 0.6, 0.4, 0.02, 0.09])
-    recive = random.choice([0.012, 0.05, 0.021, 0.032, 0.066, 0.011, 0.09, 0.06])
-    await asyncio.sleep(0.5)
-    am = await m.reply(i18n.t(uid, "**⋆ هلپر هم اکنون آنلاین میباشد !**", "**⋆ The helper is online now !**"))
-    await asyncio.sleep(0.2)
-    await am.edit(i18n.t(uid, "**⋆ هلپر هم اکنون آنلاین میباشد !**\n◍ زمان های سپری شده **:**", "**⋆ The helper is online now !**\n◍ Elapsed times **:**"))
-    await asyncio.sleep(0.2)
-    await am.edit(i18n.t(uid, f"**⋆ هلپر هم اکنون آنلاین میباشد !**\n◍ زمان های سپری شده **:**\n↓ دریافت ·۰• {recive} ثانیه", f"**⋆ The helper is online now !**\n◍ Elapsed times **:**\n↓ Receive ·۰• {recive}s"))
-    await asyncio.sleep(0.2)
-    await am.edit(i18n.t(uid, f"**⋆ هلپر هم اکنون آنلاین میباشد !**\n◍ زمان های سپری شده **:**\n↓ دریافت ·۰• {recive} ثانیه\n↑ ارسال ·۰•  {send} ثانیه", f"**⋆ The helper is online now !**\n◍ Elapsed times **:**\n↓ Receive ·۰• {recive}s\n↑ Send ·۰•  {send}s"))
+    recv = _update_latency(m)
+    # a real MTProto round-trip through the helper session
+    started = time.monotonic()
+    try:
+        await ubot.get_me()
+    except Exception as exc:
+        await m.reply(i18n.t(uid, f"• هلپر پاسخ نداد : `{utils.brief_error(exc)}`",
+                             f"• The helper did not respond : `{utils.brief_error(exc)}`"))
+        return
+    send = f"{time.monotonic() - started:.3f}"
+    await _ping_card(m, uid, "هلپر هم اکنون آنلاین میباشد", "The helper is online now", recv, send)
 
 
 # ----------------------------------------------------------------------
