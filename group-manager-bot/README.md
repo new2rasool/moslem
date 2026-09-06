@@ -79,6 +79,13 @@ plugins/<name>/plugin.py   ← قابلیت (قرارداد: PLUGIN_VERSION + re
 | `mediaflood` | `mediaflood/setmediaflood` | مهار سیل رسانه‌ای (حذف + هشدار محدود) |
 | `nameguard` | `nameguard` | گارد نام تازه‌واردان (لینک/طول/ایموجی) |
 | `backup` | `backup/restore` | پشتیبان‌گیری/بازیابی JSON تنظیمات گروه |
+| `faq` | `faq/faqadd/faqdel` | پرسش‌های پرتکرار گروه با دکمه (صفحه‌بندی) |
+| `joinlog` | `joinlog/setjoinlog` | لاگ ورود/خروج اعضا به کانال جداگانه |
+| `safemode` | `safemode` | حالت امن: روشن‌کردن یک‌جای محافظت‌ها + بازگردانی دقیق |
+| `botprotect` | `botprotect` | ضد ربات‌های تازه‌وارد (ban/kick + لیست سفید) |
+| `karma` | `karma/karmatop/karmareset` | امتیاز قدردانی اعضا با محدودیت روزانه |
+| `timednote` | `timednote/timednotes/timednotedel` | اعلان زمان‌دارِ یک‌باره |
+| `mediafocus` | `mediafocus` | حالت «فقط رسانه» (حذف متن/کپشنِ غیرمجاز) |
 
 فرمان‌های خود هسته (بدون پلاگین): `/start`، `/help` (فهرست پویا)، `/plugins`،
 `/plugin load|unload|reload|reloadall` (سودو، پیوی) و
@@ -86,12 +93,12 @@ plugins/<name>/plugin.py   ← قابلیت (قرارداد: PLUGIN_VERSION + re
 
 ## 📡 اتصال زنده به تلگرام (`bot/adapter/`)
 
-همهٔ ۴۴ پلاگین به تلگرام واقعی وصل‌اند: فرمان‌ها و `/help`، رویدادِ پیام‌ها
-(قفل/ضداسپم/mediaflood/autorole/…)، ورود/خروج عضو (کپچا، تأیید ورود، ضد
-راید، nameguard، خوش‌آمد)، کلیک روی دکمه‌های شیشه‌ای (۶ پیشوند: `captcha:`،
-`ja:`، `poll:`، `reportop:`، `vk:`، `lot:`) و اکشن‌های فیزیکی
-(حذف/بن/اخراج/سکوت/ارتقا/بستنِ ورود) — خطوط حسابرسی هم با `/setlog` به کانال
-لاگ می‌روند.
+همهٔ ۵۱ پلاگین به تلگرام واقعی وصل‌اند: فرمان‌ها و `/help`، رویدادِ پیام‌ها
+(قفل/ضداسپم/mediaflood/mediafocus/autorole/…)، ورود/خروج عضو (کپچا، تأیید
+ورود، ضد راید، ضد ربات، nameguard، خوش‌آمد)، کلیک روی دکمه‌های شیشه‌ای
+(۷ پیشوند: `captcha:`، `ja:`، `poll:`، `reportop:`، `vk:`، `lot:`، `faq:`)
+و اکشن‌های فیزیکی (حذف/بن/اخراج/سکوت/ارتقا/بستنِ ورود) — خطوط حسابرسی هم
+با `/setlog` به کانال لاگ می‌روند.
 
 - `bot/adapter/models.py` — مدل‌های پیام (مستقل از pyrogram)؛
   `bot/adapter/connector.py` — منطق اتصال روی پروتکل duck-typed کلاینت؛
@@ -107,7 +114,7 @@ plugins/<name>/plugin.py   ← قابلیت (قرارداد: PLUGIN_VERSION + re
 # بررسی سلامت + کشف خودکار پلاگین‌ها (بدون تلگرام/توکن)
 python3 -m bot.main --check
 
-# تست‌ها (۲۴۱ تست — منطق ناب + اتصال تلگرام با کلاینت جعلی، بدون اینترنت)
+# تست‌ها (۲۵۰ تست — منطق ناب + اتصال تلگرام با کلاینت جعلی، بدون اینترنت)
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 make test
 

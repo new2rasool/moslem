@@ -63,7 +63,10 @@ def register(api) -> None:
             ctx.respond(api.tr(ctx.lang, "already_running"))
             return
         now = time.monotonic()
-        if now - _last.get(chat_id, 0.0) < COOLDOWN_S:
+        last = _last.get(chat_id)
+        # «last» فقط پس از پایانِ یک رأی‌گیری واقعی ثبت می‌شود؛ نبودِ آن یعنی هرگز
+        # (مقایسه با صفر در سیستم‌های کم‌آپتایم اشتباه می‌شد)
+        if last is not None and now - last < COOLDOWN_S:
             ctx.respond(api.tr(ctx.lang, "cooldown", s=int(COOLDOWN_S)))
             return
         _votes[chat_id] = {

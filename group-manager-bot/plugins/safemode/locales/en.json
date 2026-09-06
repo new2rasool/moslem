@@ -1,0 +1,8 @@
+{
+  "enabled": "🛡 Safe mode ON: {n} protections enabled. (previous state saved)",
+  "disabled": "🛡 Safe mode OFF; previous protection state restored.",
+  "status": "🛡 Safe mode: {state}\nActive protections: {names}",
+  "none": "none",
+  "on": "on",
+  "off": "off"
+}

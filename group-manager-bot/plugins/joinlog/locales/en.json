@@ -1,0 +1,12 @@
+{
+  "joined": "👋 Joined: {name} ({who}) → «{title}»",
+  "left": "🚪 Left: {name} ({who}) ← «{title}»",
+  "enabled": "✅ Join/leave logging enabled.",
+  "disabled": "✅ Join/leave logging disabled.",
+  "status": "ℹ️ Join/leave log: {state} | channel: {channel}",
+  "cleared": "🗑 Join-log channel cleared (lines fall back to the group).",
+  "bad_channel": "❌ Channel id must be numeric (e.g. -1001234567890).",
+  "set": "✅ Join-log channel: {channel}",
+  "on": "on",
+  "off": "off"
+}

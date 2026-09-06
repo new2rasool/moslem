@@ -1,0 +1,13 @@
+{
+  "usage": "📎 Usage: timednote <30m|2h|1d6h> <text>",
+  "range": "❌ Delay must be between 1 minute and 7 days.",
+  "long": "❌ Text max {n} characters.",
+  "full": "❌ Limit of {n} concurrent notes per group reached.",
+  "scheduled": "⏰ Note #{id} scheduled — sends in {when} (slots left: {remaining}).",
+  "empty": "ℹ️ No scheduled notes in this group.",
+  "list_header": "📌 Scheduled notes in this group:",
+  "usage_del": "📎 Usage: timednotedel <id>",
+  "removed": "🗑 Note #{id} removed.",
+  "not_found": "❌ Note #{id} not found.",
+  "delivered": "⏰ {text}"
+}

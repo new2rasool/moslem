@@ -1,0 +1,11 @@
+{
+  "blocked": "🤖 Bot «{name}» ({user}) is not allowed and was {mode}.",
+  "enabled": "✅ Bot protection ON (unknown bots are removed).",
+  "disabled": "✅ Bot protection OFF.",
+  "mode_set": "✅ Action for unknown bots: {mode}",
+  "allowed": "✅ Bot {user} added to the whitelist.",
+  "denied": "🗑 Bot {user} removed from the whitelist.",
+  "empty_allow": "ℹ️ The whitelist is empty.",
+  "allow_list": "🟢 Bot whitelist: {ids}",
+  "status": "🤖 Bot protection: {state} | action: {mode} | whitelist: {n} bots"
+}

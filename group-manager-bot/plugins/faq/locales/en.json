@@ -1,0 +1,17 @@
+{
+  "list": "📋 Group FAQ ({n} items) — pick one:",
+  "empty": "ℹ️ No FAQ items in this group yet.",
+  "empty_admin": "ℹ️ No FAQ items yet. Add the first one with «{usage}».",
+  "usage_add": "📎 Usage: faqadd <question> => <answer>",
+  "too_long": "❌ Question max {q} and answer max {a} characters.",
+  "full": "❌ Limit of {n} items reached; remove one first.",
+  "dup": "❌ This question (same meaning) already exists.",
+  "added": "✅ Question «{q}» saved ({n} total).",
+  "pick": "📌 Send the number of the question to remove:",
+  "usage_del": "📎 Usage: faqdel <number> or faqdel all",
+  "bad_index": "❌ Invalid question number.",
+  "removed": "🗑 Question «{q}» removed.",
+  "cleared": "🗑 All questions removed.",
+  "answer": "❓ {q}\n\n💬 {a}",
+  "stale": "ℹ️ This button has expired; run /faq again."
+}

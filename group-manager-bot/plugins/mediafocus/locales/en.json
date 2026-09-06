@@ -1,0 +1,12 @@
+{
+  "warn_text": "🖼 {user} this group is media-only; text messages are removed.",
+  "warn_caption": "🖼 Captions on media are not allowed; message removed.",
+  "enabled": "🖼 Media-only mode ON (text without media is removed).",
+  "disabled": "🖼 Media-only mode OFF.",
+  "caption_on": "✅ Captions on media allowed.",
+  "caption_off": "✅ Captions on media forbidden (media only).",
+  "usage_caption": "📎 Usage: mediafocus caption <on|off>",
+  "status": "🖼 Media-only mode: {state} | captions: {caption}",
+  "on": "on",
+  "off": "off"
+}
