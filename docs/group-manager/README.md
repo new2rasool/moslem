@@ -45,6 +45,7 @@
 | `14-professional-plugins.md` | پلاگین‌های حرفه‌ای | locks، wordguard، audit (کانال لاگ)، roles_admin، اکشن ساختاریافته |
 | `15-advanced2-plugins.md` | پلاگین‌های پیشرفتهٔ نسل دوم | captcha تعاملی، antiraid، filters + on_tick/دکمه‌ها |
 | `16-advanced3-plugins.md` | پلاگین‌های نسل سوم | levels (XP)، stats (آمار)، notes (یادداشت) |
+| `17-advanced4-plugins.md` | پلاگین‌های بسیار پیشرفته | automod (تشدید خودکار)، report، gban (بن سراسری) |
 
 هر فایل مستقل است و میتوانید مستقیم از این فهرست وارد موضوع دلخواه شوید.
 

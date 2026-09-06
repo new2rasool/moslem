@@ -1,0 +1,13 @@
+{
+  "usage": "📎 Usage: report <id> <reason>",
+  "no_self": "❌ You cannot report yourself or an invalid user.",
+  "bad_reason": "❌ Reason must be between {mn} and {mx} characters.",
+  "staff_target": "🔒 You cannot report admins/staff.",
+  "cooldown": "⏳ Wait {s}s before the next report (anti-spam).",
+  "hourly_limit": "⛔ Hourly limit of {n} reports reached.",
+  "done": "✅ Report for user {target} recorded and admins notified.",
+  "no_storage": "⚠️ Audit ledger is not available.",
+  "empty": "📭 No reports yet.",
+  "header": "📮 {n} recent reports (to review):",
+  "notice": "📮 New report for admins: user {target} (report # {id})"
+}
