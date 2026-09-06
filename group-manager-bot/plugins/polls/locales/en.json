@@ -1,0 +1,12 @@
+{
+  "usage": "📎 Usage: poll <question | option1 | option2 | ...> (2-{mx} options)",
+  "bad": "❌ Invalid question/options (question up to 200 chars).",
+  "bad_opt": "❌ Each option must be 1-80 characters.",
+  "created": "✅ Poll with {n} options created — vote with the buttons:",
+  "closed": "ℹ️ This poll is closed or expired.",
+  "already": "ℹ️ You already voted. (now: option «{opt}»)",
+  "voted": "✅ Vote for «{opt}» recorded (total: {total}).",
+  "none": "📭 No active poll.",
+  "total": "Total votes: {n}",
+  "winner": "🏆 Winner: «{opt}» with {n} votes"
+}

@@ -55,6 +55,9 @@ plugins/<name>/plugin.py   ← قابلیت (قرارداد: PLUGIN_VERSION + re
 | `automod` | `automod/automodset` | تشدید خودکار مجازات بر اساس رفتار (بن خودکار) |
 | `report` | `report/reports` | گزارش تخلف با ضدسوءاستفاده + ثبت در دفتر |
 | `gban` | `gban/ungban/gbanlist` | ممنوعیت سراسری چندگروهی (فقط SUDO) |
+| `polls` | `poll/pollresults/pollclose` | نظرسنجی تعاملی با دکمه (یک رأی برای هر عضو) |
+| `afk` | `afk` | وضعیت دورازدسترس با اعلانِ منشن |
+| `posthours` | `posthours` | محدودیت ساعات ارسال (پشتیبانی بازهٔ شبانه) |
 
 فرمان‌های خود هسته (بدون پلاگین): `/start`، `/help` (فهرست پویا)، `/plugins`،
 `/plugin load|unload|reload|reloadall` (سودو، پیوی) و
@@ -66,7 +69,7 @@ plugins/<name>/plugin.py   ← قابلیت (قرارداد: PLUGIN_VERSION + re
 # بررسی سلامت + کشف خودکار پلاگین‌ها (بدون تلگرام/توکن)
 python3 -m bot.main --check
 
-# تست‌ها (۱۹۶ تست — منطق ناب، بدون تلگرام)
+# تست‌ها (۲۰۳ تست — منطق ناب، بدون تلگرام)
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 make test
 
@@ -126,7 +129,7 @@ bot/
 ├── db/  cache/  i18n/ config.py  logging_setup.py
 └── handlers/base.py   # ابزار چک دسترسی (برای آداپتورها)
 plugins/               # ← همهٔ قابلیت‌ها این‌جا (کشف خودکار)
-tests/                 # ۱۹۶ تست (unit + پلاگین + E2E بدون تلگرام)
+tests/                 # ۲۰۳ تست (unit + پلاگین + E2E بدون تلگرام)
 ```
 
 ## 🛣 وضعیت و قدم‌های بعدی
