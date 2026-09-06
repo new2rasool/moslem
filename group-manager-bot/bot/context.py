@@ -21,6 +21,11 @@ class _Sender:
             self.messages.append(text)
 
 
+def _act(actions: list[dict], kind: str, **kw) -> None:
+    """ثبت یک «اکشن ساختاریافته» (اجرای فیزیکی با آداپتور)."""
+    actions.append({"type": kind, **kw})
+
+
 @dataclass
 class CommandContext:
     """زمینهٔ یک فرمان اجراشده.
@@ -40,11 +45,16 @@ class CommandContext:
     sender_username: str = ""
     reply_to_user_id: int | None = None
     reply_to_user_name: str = ""
+    actions: list = field(default_factory=list)
     _sender: _Sender = field(default_factory=_Sender, repr=False)
 
     def respond(self, text: str) -> None:
         """افزودن پیام خروجی (پاسخ به فرمان)."""
         self._sender.respond(text)
+
+    def act(self, kind: str, **kw) -> None:
+        """درخواست یک اکشن فیزیکی از آداپتور (مثل delete/restrict/ban)."""
+        _act(self.actions, kind, **kw)
 
     @property
     def outgoing(self) -> list[str]:
@@ -62,10 +72,15 @@ class EventContext:
     user_name: str = ""
     user_username: str = ""
     data: dict = field(default_factory=dict)
+    actions: list = field(default_factory=list)
     _sender: _Sender = field(default_factory=_Sender, repr=False)
 
     def respond(self, text: str) -> None:
         self._sender.respond(text)
+
+    def act(self, kind: str, **kw) -> None:
+        """درخواست یک اکشن فیزیکی از آداپتور (مثل delete_message/restrict)."""
+        _act(self.actions, kind, **kw)
 
     @property
     def outgoing(self) -> list[str]:
@@ -84,10 +99,14 @@ class CallbackContext:
     user_id: int
     chat_id: int | None = None
     lang: str = "fa"
+    actions: list = field(default_factory=list)
     _sender: _Sender = field(default_factory=_Sender, repr=False)
 
     def respond(self, text: str) -> None:
         self._sender.respond(text)
+
+    def act(self, kind: str, **kw) -> None:
+        _act(self.actions, kind, **kw)
 
     @property
     def outgoing(self) -> list[str]:

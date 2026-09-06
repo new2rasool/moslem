@@ -1,0 +1,14 @@
+{
+  "on": "روشن",
+  "off": "خاموش",
+  "usage_add": "📎 کاربرد: addblacklist <کلمه|عبارت ...>",
+  "usage_rm": "📎 کاربرد: rmblacklist <کلمه ...>",
+  "added": "✅ {n} کلمه اضافه شد (مجموع: {total}).",
+  "removed": "✅ {n} کلمه حذف شد (مجموع: {total}).",
+  "header": "🚫 فیلتر کلمات سیاه — {state} | حالت: {mode}",
+  "empty": "هیچ کلمه‌ای ثبت نشده است.",
+  "mode_delete": "✅ حالت: حذف بی‌صدا",
+  "mode_warn": "✅ حالت: حذف + هشدار",
+  "usage_mode": "📎 کاربرد: blacklistmode <delete|warn>",
+  "warned": "⚠️ {user}: کلمهٔ ممنوع («{word}») استفاده شد؛ پیام حذف شد."
+}

@@ -1,0 +1,9 @@
+{
+  "line": "🕐 {at}\n⚡ {label}{dur}\n🎯 Target: {target}\n👤 By: {by}\n📝 Reason: {reason}",
+  "usage_setlog": "📎 Usage: setlog <@channel | log channel id>",
+  "log_set": "✅ Log channel set: {channel}",
+  "sample_reason": "Sample (format test)",
+  "header": "📜 Recent log events:",
+  "empty": "No events recorded yet.",
+  "no_storage": "⚠️ Audit storage is not available."
+}

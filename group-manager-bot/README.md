@@ -21,9 +21,13 @@
 plugins/<name>/plugin.py   ← قابلیت (قرارداد: PLUGIN_VERSION + register(api))
         │  register(api)
         ▼
-هسته:  PluginHost(کشف/ری‌لود) ← Registry(ثبت فرمان/رویداد/دکمه)
-        Dispatcher(مسیریابی + سطح دسترسی + انزوا)
+هسته:  PluginHost(کشف/ری‌لود/emit داخلی) ← Registry(ثبت فرمان/رویداد/دکمه)
+        Dispatcher(مسیریابی + سطح دسترسی + انزوا + action_sink)
         services/access · domain/* · repositories · db · cache · i18n
+
+اجرای فیزیکی: پلاگین‌ها «اکشن ساختاریافته» (ctx.act / api.record_action) تولید
+می‌کنند؛ آداپتورِ تلگرام آن‌ها را از action_sink (حذف/محدودیت) و audit_sink
+(ارسال به کانال لاگ) اجرا می‌کند.
 ```
 
 لایه‌های خالص (domain) همان‌ها هستند؛ فقط «قابلیت‌ها» از هسته به پلاگین‌ها منتقل شده‌اند.
@@ -38,6 +42,10 @@ plugins/<name>/plugin.py   ← قابلیت (قرارداد: PLUGIN_VERSION + re
 | `greeter` | رویداد ورود/خروج عضو + `setgreet` | رویدادمحور + متن سفارشی گروه |
 | `moderation` | `ban/kick/mute/tmute/warn/recent` | تنبیه پلکانی + مصونیت سطوح + دفتر حسابرسی |
 | `antiflood` | رویداد `message` + `setflood` | ضد سیل پنجره‌ای + معافیت ادمین |
+| `locks` | `lock/unlock/locks` + لیست سفید دامنه | قفل url/forward/رسانه با اکشن ساختاریافته |
+| `wordguard` | `addblacklist/rmblacklist/…` | فیلتر کلمات سیاه با نرمال‌سازی ضد دورزدن |
+| `audit` | `setlog/log/logtest` | کانال لاگ: قالب‌بندی خودکار action_recorded |
+| `roles_admin` | `promote/demote/adminlist` | ارتقا/عزل با سلسله‌مراتب + ثبت در حسابرسی |
 
 فرمان‌های خود هسته (بدون پلاگین): `/start`، `/help` (فهرست پویا)، `/plugins`،
 `/plugin load|unload|reload|reloadall` (سودو، پیوی) و
@@ -49,7 +57,7 @@ plugins/<name>/plugin.py   ← قابلیت (قرارداد: PLUGIN_VERSION + re
 # بررسی سلامت + کشف خودکار پلاگین‌ها (بدون تلگرام/توکن)
 python3 -m bot.main --check
 
-# تست‌ها (۱۳۱ تست — منطق ناب، بدون تلگرام)
+# تست‌ها (۱۵۸ تست — منطق ناب، بدون تلگرام)
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 make test
 
@@ -109,7 +117,7 @@ bot/
 ├── db/  cache/  i18n/ config.py  logging_setup.py
 └── handlers/base.py   # ابزار چک دسترسی (برای آداپتورها)
 plugins/               # ← همهٔ قابلیت‌ها این‌جا (کشف خودکار)
-tests/                 # ۱۳۱ تست (unit + پلاگین + E2E بدون تلگرام)
+tests/                 # ۱۵۸ تست (unit + پلاگین + E2E بدون تلگرام)
 ```
 
 ## 🛣 وضعیت و قدم‌های بعدی

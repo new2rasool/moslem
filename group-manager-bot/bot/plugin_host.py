@@ -100,7 +100,48 @@ class PluginHost:
         self.records: dict[str, PluginRecord] = {}
         self._hashes: dict[str, str] = {}  # path → sha256
         self._running = False
+        # هدفِ رویدادهای داخلی (مثل action_recorded) — آداپتور/تست آن را ست می‌کند
+        self.audit_sink: Any = None
         self._register_core_commands()
+
+    # ── انتشار رویداد داخلی (برای پلاگین‌ها — مثل action_recorded) ───
+    async def emit(
+        self,
+        kind: str,
+        *,
+        chat_id: int | None = None,
+        lang: str = "fa",
+        user_id: int | None = None,
+        user_name: str = "",
+        user_username: str = "",
+        data: dict | None = None,
+    ) -> list[str]:
+        """اجرای شنونده‌های یک رویداد داخلی؛ برمی‌گرداند پیام‌های تولیدشده.
+
+        برخلاف رویدادهای بیرونی (که آداپتور صدا می‌زند)، این یکی درون هسته برای
+        پلاگین‌های هم‌کار استفاده می‌شود و پلاگین‌های غیرفعالِ همان گروه را رد می‌کند.
+        """
+        from bot.context import EventContext
+        from bot.registry import CORE_PLUGIN
+
+        ctx = EventContext(
+            kind=kind,
+            chat_id=chat_id,
+            lang=lang,
+            user_id=user_id,
+            user_name=user_name,
+            user_username=user_username,
+            data=data or {},
+        )
+        for binding in self.registry.events(kind):
+            if chat_id is not None and binding.plugin != CORE_PLUGIN:
+                if not self.is_plugin_enabled(chat_id, binding.plugin):
+                    continue
+            try:
+                await binding.handler(ctx)
+            except Exception:  # noqa: BLE001
+                log.exception("خطا در رویداد داخلی %s (پلاگین %s)", kind, binding.plugin)
+        return ctx.outgoing
 
     # ── فعال/غیرفعال بودن پلاگین در هر گروه (تنظیمات گروه) ──────────
     def is_plugin_enabled(self, chat_id: int | None, plugin: str) -> bool:

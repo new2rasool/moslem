@@ -1,0 +1,19 @@
+{
+  "on": "on",
+  "off": "off",
+  "usage_lock": "📎 Lockable: url, forward, photos, videos, gifs, stickers, voice, video_note, documents, contacts, locations, polls, games\nUsage: lock <item> [delete|warn|notify]",
+  "bad_mode": "❌ Invalid mode: {mode} (delete|warn|notify)",
+  "locked": "🔒 {item} locked (mode: {mode}).",
+  "unlocked": "🔓 {item} unlocked.",
+  "status_header": "🔐 Locks status — {state}",
+  "no_locks": "No active locks.",
+  "whitelist_show": "✅ Whitelisted domains: {domains}",
+  "locks_enabled": "✅ Lock enforcement enabled.",
+  "locks_disabled": "🔴 Lock enforcement disabled.",
+  "usage_onoff": "📎 Usage: lockson <on|off>",
+  "usage_wl": "📎 Usage: lockaddwl <domain...> or lockrmwl <domain...>",
+  "wl_added": "✅ {n} domain(s) added (total: {total}).",
+  "wl_removed": "✅ Requested domains removed (total: {total}).",
+  "violation_warn": "⚠️ {user}: «{item}» is not allowed in this group. Message deleted.",
+  "violation_notify": "ℹ️ {user}: please don't send «{item}» (group rules)."
+}

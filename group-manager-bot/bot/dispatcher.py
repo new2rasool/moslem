@@ -38,12 +38,15 @@ class Dispatcher:
         translator: Translator,
         default_lang: str = "fa",
         plugin_enabled: PluginEnabled | None = None,
+        action_sink=None,
     ) -> None:
         self.registry = registry
         self.access = access
         self.translator = translator
         self.default_lang = default_lang
         self.plugin_enabled = plugin_enabled
+        # دریافت «اکشن‌های ساختاریافته» تولیدشده توسط پلاگین‌ها (اجرای فیزیکی با آداپتور)
+        self.action_sink = action_sink
 
     # ── ابزار ───────────────────────────────────────────────────────
     def _denied_text(self, lang: str, required: AccessLevel) -> str:
@@ -158,7 +161,18 @@ class Dispatcher:
         except Exception:  # noqa: BLE001 — ایزوله‌سازی خطا
             log.exception("خطا در فرمان %s (پلاگین %s)", binding.name, binding.plugin)
             ctx.respond(self.translator.t(lang, "cmd_error"))
+        self._flush_actions(chat_id, ctx)
         return ctx.outgoing
+
+    def _flush_actions(self, chat_id: int | None, ctx) -> None:
+        """اگر پلاگین «اکشن ساختاریافته» ثبت کرده باشد، به action_sink می‌دهد."""
+        if self.action_sink is None or not ctx.actions:
+            return
+        for action in ctx.actions:
+            try:
+                self.action_sink(chat_id, action)
+            except Exception:  # noqa: BLE001
+                log.exception("action_sink ناموفق بود")
 
     # ── توزیع رویداد ────────────────────────────────────────────────
     async def dispatch_event(
@@ -187,6 +201,7 @@ class Dispatcher:
                 await binding.handler(ctx)
             except Exception:  # noqa: BLE001
                 log.exception("خطا در رویداد %s (پلاگین %s)", kind, binding.plugin)
+        self._flush_actions(chat_id, ctx)
         return ctx.outgoing
 
     # ── توزیع دکمه ──────────────────────────────────────────────────
@@ -220,4 +235,5 @@ class Dispatcher:
         except Exception:  # noqa: BLE001
             log.exception("خطا در دکمهٔ %s (پلاگین %s)", prefix, binding.plugin)
             ctx.respond(self.translator.t(lang, "cmd_error"))
+        self._flush_actions(chat_id, ctx)
         return ctx.outgoing

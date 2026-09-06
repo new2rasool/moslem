@@ -23,6 +23,8 @@ EVENT_MEMBER_JOINED = "member_joined"
 EVENT_MEMBER_LEFT = "member_left"
 EVENT_MESSAGE = "message"
 EVENT_CALLBACK = "callback"
+# رویداد داخلی: یک اکشن در دفتر حسابرسی ثبت شد (audit/log plugin شنوندهٔ آن است)
+EVENT_ACTION = "action_recorded"
 
 CORE_PLUGIN = "<core>"  # نام ثبت‌نامیِ فرمان‌های سیستم (میزبان خود هسته)
 

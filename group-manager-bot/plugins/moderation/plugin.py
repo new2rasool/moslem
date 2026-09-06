@@ -18,7 +18,7 @@ from bot.domain.roles import AccessLevel
 PLUGIN_VERSION = "1.0.0"
 
 # اکشن‌هایی که «آداپتور اجرای فیزیکی» باید انجام دهد (قرارداد خروجی)
-_TARGET_RE = re.compile(r"^-?\d{4,}$")  # آیدی عددی (فقط برای تست/پیاده‌سازی مستقیم)
+_TARGET_RE = re.compile(r"^-?\d{2,}$")  # آیدی عددی (فقط برای تست/پیاده‌سازی مستقیم)
 
 
 def _is_id(token: str) -> bool:
@@ -52,7 +52,7 @@ def register(api) -> None:
     policy = PunishmentPolicy()
 
     # ── انتخاب اکشن روی هدف با قواعد ایمنی ──────────────────────────
-    def _punish(ctx, action: str, duration_s: int | None = None) -> None:
+    async def _punish(ctx, action: str, duration_s: int | None = None) -> None:
         """تصمیم‌گیری + ثبت در دفتر حسابرسی + پیام نتیجه. (اجرا با آداپتور)"""
         target_id, err = _resolve_target(ctx, api)
         if err:
@@ -79,11 +79,10 @@ def register(api) -> None:
             ctx.respond(api.tr(ctx.lang, "reason_required"))
             return
 
-        # ثبت در دفتر حسابرسی
-        if api.actions is not None:
-            api.actions.add(
-                ctx.chat_id, action, target_id, ctx.user_id, reason=reason, duration_s=duration_s
-            )
+        # ثبت در دفتر حسابرسی + انتشار رویداد action_recorded برای کانال لاگ
+        await api.record_action(
+            ctx.chat_id, action, target_id, ctx.user_id, reason=reason, duration_s=duration_s
+        )
         if duration_s:
             ctx.respond(api.tr(ctx.lang, f"done_{action}", name=_name(ctx, api), dur=format_duration(duration_s)))
         else:
@@ -91,13 +90,13 @@ def register(api) -> None:
 
     # ── فرمان‌های تنبیه ─────────────────────────────────────────────
     async def cmd_ban(ctx):
-        _punish(ctx, "ban")
+        await _punish(ctx, "ban")
 
     async def cmd_kick(ctx):
-        _punish(ctx, "kick")
+        await _punish(ctx, "kick")
 
     async def cmd_mute(ctx):
-        _punish(ctx, "mute")
+        await _punish(ctx, "mute")
 
     async def cmd_tmute(ctx):
         dur, rest = _split_duration_args(ctx.args)
@@ -105,13 +104,13 @@ def register(api) -> None:
             ctx.respond(api.tr(ctx.lang, "need_duration"))
             return
         ctx.args = rest  # مدت از آرگومان‌ها جدا شد؛ باقی می‌ماند
-        _punish(ctx, "mute", duration_s=int(dur))
+        await _punish(ctx, "mute", duration_s=int(dur))
 
     async def cmd_unmute(ctx):
-        _punish(ctx, "unmute")
+        await _punish(ctx, "unmute")
 
     async def cmd_unban(ctx):
-        _punish(ctx, "unban")
+        await _punish(ctx, "unban")
 
     async def cmd_recent(ctx):
         if api.actions is None:
@@ -158,7 +157,7 @@ def register(api) -> None:
             return
 
         count = api.warns.add(ctx.chat_id, target_id, reason=reason, by_user=ctx.user_id)
-        api.actions.add(ctx.chat_id, "warn", target_id, ctx.user_id, reason=reason)
+        await api.record_action(ctx.chat_id, "warn", target_id, ctx.user_id, reason=reason)
         limit = _group_setting(api, ctx.chat_id, "warn_limit", 3)
 
         # اکشن خودکار اگر به آستانه رسید
@@ -167,8 +166,8 @@ def register(api) -> None:
         if auto is not None:
             action, dur = auto
             api.warns.reset(ctx.chat_id, target_id)
-            api.actions.add(ctx.chat_id, f"auto:{action}", target_id, ctx.user_id,
-                            reason="auto after warns", duration_s=dur)
+            await api.record_action(ctx.chat_id, f"auto:{action}", target_id, ctx.user_id,
+                                    reason="auto after warns", duration_s=dur)
             if dur:
                 text += "\n" + api.tr(ctx.lang, "auto_action_timed",
                                       action=action, dur=format_duration(dur))
@@ -190,7 +189,7 @@ def register(api) -> None:
             return
         assert target_id is not None
         remaining = api.warns.remove_last(ctx.chat_id, target_id)
-        api.actions.add(ctx.chat_id, "unwarn", target_id, ctx.user_id)
+        await api.record_action(ctx.chat_id, "unwarn", target_id, ctx.user_id)
         ctx.respond(api.tr(ctx.lang, "unwarned", name=_name(ctx, api), count=remaining))
 
     async def cmd_warns(ctx):

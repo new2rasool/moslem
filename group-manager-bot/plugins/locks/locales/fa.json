@@ -1,0 +1,19 @@
+{
+  "on": "روشن",
+  "off": "خاموش",
+  "usage_lock": "📎 آیتم‌های قابل قفل: url، forward، photos، videos، gifs، stickers، voice، video_note، documents، contacts، locations، polls، games\nکاربرد: lock <item> [delete|warn|notify]",
+  "bad_mode": "❌ حالت نامعتبر: {mode} (delete|warn|notify)",
+  "locked": "🔒 {item} قفل شد (حالت: {mode}).",
+  "unlocked": "🔓 قفل {item} برداشته شد.",
+  "status_header": "🔐 وضعیت قفل‌ها — {state}",
+  "no_locks": "هیچ قفلی فعال نیست.",
+  "whitelist_show": "✅ دامنه‌های مجاز: {domains}",
+  "locks_enabled": "✅ اعمال قفل‌ها روشن شد.",
+  "locks_disabled": "🔴 اعمال قفل‌ها خاموش شد.",
+  "usage_onoff": "📎 کاربرد: lockson <on|off>",
+  "usage_wl": "📎 کاربرد: lockaddwl <domain...> یا lockrmwl <domain...>",
+  "wl_added": "✅ {n} دامنه اضافه شد (مجموع: {total}).",
+  "wl_removed": "✅ دامنه‌های خواسته‌شده حذف شدند (مجموع: {total}).",
+  "violation_warn": "⚠️ {user}: ارسال «{item}» در این گروه ممنوع است. پیام حذف شد.",
+  "violation_notify": "ℹ️ {user}: لطفاً «{item}» نفرستید (طبق قوانین گروه)."
+}

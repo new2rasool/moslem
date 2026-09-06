@@ -113,6 +113,56 @@ class PluginAPI:
         if self.host is not None:
             self.host.set_plugin_enabled(chat_id, self.name, enabled)
 
+    # ── ثبت اکشن در دفتر حسابرسی + انتشار رویداد داخلی ───────────────
+    async def record_action(
+        self,
+        chat_id: int | None,
+        action: str,
+        target_user: int,
+        by_user: int,
+        reason: str = "",
+        duration_s: int | None = None,
+    ) -> dict | None:
+        """
+        ثبت اکشن در دفتر حسابرسی (اگر موجود باشد) و اطلاع‌رسانی به پلاگین audit.
+
+        خروجی: دیکشنری ردیف ثبت‌شده (برای تست/بازگشت). هر اکشن مهم (ban/warn/auto…)
+        باید از این متد بگذرد تا «کانال لاگ» بتواند آن را منتشر کند.
+        """
+        import time
+
+        if self.actions is None:
+            return None
+        row_id = self.actions.add(
+            chat_id, action, target_user, by_user, reason=reason, duration_s=duration_s
+        )
+        row = {
+            "id": row_id,
+            "chat_id": chat_id,
+            "action": action,
+            "target_user": target_user,
+            "by_user": by_user,
+            "reason": reason,
+            "duration_s": duration_s,
+            "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        if self.host is not None and chat_id is not None:
+            group = self.groups.get(chat_id)
+            lang = group.lang if group else "fa"
+            lines = await self.host.emit(
+                "action_recorded",
+                chat_id=chat_id,
+                lang=lang,
+                data=row,
+            )
+            sink = self.host.audit_sink
+            if sink is not None and lines:
+                try:
+                    sink(chat_id, lines)
+                except Exception:  # noqa: BLE001
+                    self._log.exception("audit_sink ناموفق بود")
+        return row
+
     # ── ثبت فرمان ───────────────────────────────────────────────────
     def register_command(
         self,
