@@ -1,0 +1,11 @@
+{
+  "on": "on",
+  "off": "off",
+  "status": "🐢 Slow mode: {state} | interval: {secs}s",
+  "enabled": "✅ Slow mode enabled (early messages get deleted).",
+  "disabled": "🔴 Slow mode disabled.",
+  "usage": "📎 Usage: slowmode <on|off>",
+  "usage_set": "📎 Usage: setslowmode <1-3600 seconds>",
+  "set_ok": "✅ Enforced interval: {secs}s",
+  "too_fast": "🐢 {user}, slow down! Wait at least {secs}s between messages."
+}

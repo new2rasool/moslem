@@ -58,6 +58,13 @@ plugins/<name>/plugin.py   ← قابلیت (قرارداد: PLUGIN_VERSION + re
 | `polls` | `poll/pollresults/pollclose` | نظرسنجی تعاملی با دکمه (یک رأی برای هر عضو) |
 | `afk` | `afk` | وضعیت دورازدسترس با اعلانِ منشن |
 | `posthours` | `posthours` | محدودیت ساعات ارسال (پشتیبانی بازهٔ شبانه) |
+| `joinapprove` | `joinapprove/setapprovetime` | گیت ورود با تأیید مدیر (دکمه‌ای + مهلت خودکار) |
+| `rules` | `setrules/rules/delrules/ruleson` | قوانین گروه با ارسال خودکار به تازه‌وارد |
+| `antirepeat` | `antirepeat/setrepeat` | ضد کپی‌پیست با نرمال‌سازی |
+| `slowmode` | `slowmode/setslowmode` | فاصلهٔ اجباری بین پیام‌ها |
+| `lookup` | `lookup` | کارت تشخیص کاربر (نقش/اخطار/سابقه/گبن) |
+| `newcomer_guard` | `newcomer/newcomermin` | سکوت تازه‌واردان تا N دقیقه |
+| `globalguard` | `ggadd/ggdel/gglist` | کلمات ممنوع سراسری (SUDO) |
 
 فرمان‌های خود هسته (بدون پلاگین): `/start`، `/help` (فهرست پویا)، `/plugins`،
 `/plugin load|unload|reload|reloadall` (سودو، پیوی) و
@@ -69,7 +76,7 @@ plugins/<name>/plugin.py   ← قابلیت (قرارداد: PLUGIN_VERSION + re
 # بررسی سلامت + کشف خودکار پلاگین‌ها (بدون تلگرام/توکن)
 python3 -m bot.main --check
 
-# تست‌ها (۲۰۳ تست — منطق ناب، بدون تلگرام)
+# تست‌ها (۲۱۵ تست — منطق ناب، بدون تلگرام)
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 make test
 
@@ -129,7 +136,7 @@ bot/
 ├── db/  cache/  i18n/ config.py  logging_setup.py
 └── handlers/base.py   # ابزار چک دسترسی (برای آداپتورها)
 plugins/               # ← همهٔ قابلیت‌ها این‌جا (کشف خودکار)
-tests/                 # ۲۰۳ تست (unit + پلاگین + E2E بدون تلگرام)
+tests/                 # ۲۱۵ تست (unit + پلاگین + E2E بدون تلگرام)
 ```
 
 ## 🛣 وضعیت و قدم‌های بعدی

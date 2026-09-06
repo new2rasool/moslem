@@ -1,0 +1,11 @@
+{
+  "welcome_rules": "📜 Welcome {user}! Please read the group rules:",
+  "none": "📭 No rules set yet.",
+  "usage": "📎 Usage: setrules <rules text>",
+  "too_long": "❌ Rules text exceeds {max} characters.",
+  "saved": "✅ Rules saved ({n} items). New members get them automatically.",
+  "deleted": "✅ Rules deleted.",
+  "auto_on": "✅ Auto-sending rules to new members enabled.",
+  "auto_off": "🔴 Auto-sending rules disabled (still available via /rules).",
+  "usage_onoff": "📎 Usage: ruleson <on|off>"
+}

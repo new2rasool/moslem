@@ -1,0 +1,11 @@
+{
+  "on": "on",
+  "off": "off",
+  "status": "🔁 Anti-repeat (copy-paste): {state}\nwindow: {window}s | min text length: {min_len}",
+  "enabled": "✅ Anti-repeat enabled.",
+  "disabled": "🔴 Anti-repeat disabled (history cleared).",
+  "usage": "📎 Usage: antirepeat <on|off>",
+  "usage_set": "📎 Usage: setrepeat <window 10-86400s> <min length 5-100>",
+  "set_ok": "✅ Set: {window}s window with min length {min_len}",
+  "repeat_warn": "🔁 {user}, please don't send repeated messages (no copy-paste)."
+}

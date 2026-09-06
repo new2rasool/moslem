@@ -1,0 +1,16 @@
+{
+  "on": "on",
+  "off": "off",
+  "status": "🚪 Admin-approval join gate: {state} | timeout: {secs}s",
+  "enabled": "✅ Join approval enabled (new joins stay restricted until an admin approves).",
+  "disabled": "🔴 Join approval disabled (pending queue cleared).",
+  "usage": "📎 Usage: joinapprove <on|off>",
+  "usage_time": "📎 Usage: setapprovetime <10-3600 seconds>",
+  "time_set": "✅ Approval timeout: {secs}s",
+  "pending": "🚪 User {user} requests to join (timeout: {secs}s).\nOnly admins may approve or reject:",
+  "staff_only": "🔒 Only admins can approve/reject joins.",
+  "no_pending": "ℹ️ No pending request for user {user} (approved/rejected/expired).",
+  "approved": "✅ User {user} approved and unrestricted.",
+  "denied": "🚫 User {user} rejected and kicked.",
+  "timeout": "⏰ Join request of user {user} timed out; they were kicked."
+}

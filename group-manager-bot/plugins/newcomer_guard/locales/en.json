@@ -1,0 +1,11 @@
+{
+  "on": "on",
+  "off": "off",
+  "status": "🛡 Newcomer guard: {state} | silence period: {minutes} min",
+  "enabled": "✅ Newcomer guard enabled (new members can't post until the period ends).",
+  "disabled": "🔴 Newcomer guard disabled.",
+  "usage": "📎 Usage: newcomer <on|off>",
+  "usage_minutes": "📎 Usage: newcomermin <1-1440 minutes>",
+  "minutes_set": "✅ Newcomer silence period: {minutes} minutes",
+  "wait": "🛡 {user}, you just joined; please wait {minutes} minutes before posting."
+}
