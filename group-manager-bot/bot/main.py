@@ -143,7 +143,11 @@ def cmd_check(cfg: Config) -> int:
 
 # ─────────────────────────────────────────────────────────────────────
 def cmd_run(cfg: Config, watch: bool = False) -> int:
-    """اجرای واقعی — آداپتور تلگرام (Pyrogram) + دیسپچر پلاگین‌ها."""
+    """اجرای واقعی — آداپتور کامل تلگرام (Pyrogram) + دیسپچر پلاگین‌ها.
+
+    همهٔ پلاگین‌ها به تلگرام متصل می‌شوند: فرمان‌ها، رویدادهای پیام/ورود/خروج،
+    دکمه‌های شیشه‌ای، اکشن‌های فیزیکی (delete/ban/mute/…) و کانال لاگ.
+    """
     setup_logging(cfg.log_level)
     try:
         cfg.validate(require_token=True)
@@ -152,86 +156,19 @@ def cmd_run(cfg: Config, watch: bool = False) -> int:
         return 2
 
     try:
-        from pyrogram import Client, enums  # noqa: PLC0415
+        from pyrogram import __version__ as _pg_ver  # noqa: PLC0415, F401
     except ImportError:
-        print("❌ Pyrogram نصب نیست. اجرا کنید:  pip install -e '.[run]'")
+        print("❌ Pyrogram نصب نیست. اجرا کنید:  pip install pyrogram")
         return 2
 
     host, dispatcher = build_host(cfg)
     print(f"✅ {len(host.enabled_names())} پلاگین بارگذاری شد: "
           + ", ".join(host.enabled_names()))
 
-    workdir = str(PROJECT_ROOT / "data")
-    app = Client("group_manager_bot", bot_token=cfg.bot_token, workdir=workdir)
+    from bot.adapter.pyrogram_app import PyrogramApp  # noqa: PLC0415
 
-    async def _lang(chat_id, user_id, is_private) -> str:
-        if is_private and user_id:
-            u = host.users.get(user_id)
-            if u:
-                return u.lang
-        elif chat_id:
-            g = host.groups.get(chat_id)
-            if g:
-                return g.lang
-        return cfg.default_lang
-
-    @app.on_message()
-    async def on_message(client, message):  # noqa: ANN001
-        try:
-            chat = message.chat
-            is_private = bool(chat and chat.type == enums.ChatType.PRIVATE)
-            chat_id = None if (chat is None or is_private) else chat.id
-            user = message.from_user
-            if user is None:
-                return
-            # رویدادهای عضو
-            if message.new_chat_members:
-                for member in message.new_chat_members:
-                    await dispatcher.dispatch_event(
-                        "member_joined",
-                        chat_id=chat_id,
-                        lang=await _lang(chat_id, None, False),
-                        user_id=member.id,
-                        user_name=(member.first_name or "") + (member.last_name or ""),
-                        user_username=member.username or "",
-                        data={"member_id": member.id,
-                              "member_name": (member.first_name or ""),
-                              "member_username": member.username or "",
-                              "chat_title": chat.title if chat else ""},
-                    )
-            # فرمان متنی
-            if message.text:
-                sends = await dispatcher.try_dispatch_command(
-                    message.text,
-                    chat_id=chat_id,
-                    user_id=user.id,
-                    is_private=is_private,
-                    lang=await _lang(chat_id, user.id, is_private),
-                    sender_name=(user.first_name or "") + (" " + user.last_name if user.last_name else ""),
-                    sender_username=user.username or "",
-                )
-                if sends:
-                    for text in sends:
-                        await message.reply(text)
-        except Exception:  # noqa: BLE001
-            log.exception("خطا در پردازش پیام")
-
-    watcher = None
-    if watch:
-        loop = asyncio.get_event_loop()
-        watcher = loop.create_task(host.watch_loop(1.0))
-        print("👀 نظارت بر پوشهٔ پلاگین‌ها فعال است (هات‌ری‌لود)")
-
-    # حلقهٔ پس‌زمینه برای on_tick پلاگین‌ها (انقضای کپچا، رهاسازی راید و…)
-    loop = asyncio.get_event_loop()
-    loop.create_task(host.start_background(2.0))
-
-    log.info("ربات در حال اجراست (هستهٔ پلاگین‌محور).")
-    try:
-        app.run()
-    finally:
-        if watcher:
-            watcher.cancel()
+    app = PyrogramApp(cfg, host, dispatcher, workdir=str(PROJECT_ROOT / "data"))
+    return app.run(watch=watch)
 
 
 def main(argv: list[str] | None = None) -> int:

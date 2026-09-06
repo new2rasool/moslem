@@ -79,6 +79,7 @@ def register(api) -> None:
 
         api.roles.set_role(ctx.chat_id, target_id, role, by_user=ctx.user_id)
         await api.record_action(ctx.chat_id, "promote", target_id, ctx.user_id, reason=role)
+        ctx.act("promote", user_id=target_id, role=role)
         labels = LEVEL_LABELS_FA if ctx.lang == "fa" else LEVEL_LABELS_EN
         ctx.respond(api.tr(ctx.lang, "promoted", target=target_id, role=labels[role_level]))
 
@@ -110,6 +111,8 @@ def register(api) -> None:
             ctx.chat_id, "demote", target_id, ctx.user_id,
             reason=f"{labels[target_level_now]} → {labels[AccessLevel.USER]}",
         )
+        if removed:
+            ctx.act("demote", user_id=target_id)
         ctx.respond(
             api.tr(ctx.lang, "demoted", target=target_id, prev=labels[target_level_now])
             if removed else api.tr(ctx.lang, "not_an_admin")

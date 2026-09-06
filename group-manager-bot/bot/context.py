@@ -117,6 +117,8 @@ class CallbackContext:
     user_id: int
     chat_id: int | None = None
     lang: str = "fa"
+    sender_name: str = ""
+    sender_username: str = ""
     actions: list = field(default_factory=list)
     keyboards: list = field(default_factory=list)
     _sender: _Sender = field(default_factory=_Sender, repr=False)

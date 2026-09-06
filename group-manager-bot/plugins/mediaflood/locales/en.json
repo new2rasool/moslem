@@ -1,0 +1,11 @@
+{
+  "on": "on",
+  "off": "off",
+  "status": "📦 Media flood guard: {state} | cap: {limit} media / {window}s",
+  "enabled": "✅ Media flood guard enabled.",
+  "disabled": "🔴 Media flood guard disabled.",
+  "usage": "📎 Usage: mediaflood <on|off>",
+  "usage_set": "📎 Usage: setmediaflood <cap 2-30> <window 10-3600s>",
+  "set_ok": "✅ Set: max {limit} media per {window}s",
+  "warn": "📦 {user}, media flooding is forbidden! (max {limit} media per minute)"
+}

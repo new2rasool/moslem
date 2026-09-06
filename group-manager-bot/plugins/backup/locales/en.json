@@ -1,0 +1,8 @@
+{
+  "too_large": "❌ Backup ({size} chars) exceeds the limit ({max}); shrink some settings.",
+  "done": "✅ Backup ({size} chars) created. To restore: restore <text below>",
+  "usage": "📎 Usage: restore <json> (no args = restore last backup of this group)",
+  "bad_json": "❌ Invalid JSON.",
+  "bad_shape": "❌ Payload must be an object (dictionary).",
+  "restored": "✅ Group settings restored from backup ({n} keys)."
+}

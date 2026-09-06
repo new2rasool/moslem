@@ -72,10 +72,34 @@ plugins/<name>/plugin.py   ← قابلیت (قرارداد: PLUGIN_VERSION + re
 | `capsguard` | `capsguard/setcaps` | ضد حروف بزرگ و نویسهٔ تکراری |
 | `reminder` | `remind/reminders/rmremind` | یادآور شخصی به چت خصوصی |
 | `status` | `status` | داشبورد فنی ربات (uptime/آمار) |
+| `votekick` | `votekick/setvotekick` | رأی‌گیری دموکراتیک اخراج (دکمه‌ای + حد نصاب) |
+| `lottery` | `lottery start/end/cancel/status` | قرعه‌کشی گروهی با دکمهٔ شرکت |
+| `digest` | `digest <min>/off` | گزارش دوره‌ای گروه (اکشن‌ها/ورود-خروج/محافظت‌ها) |
+| `autorole` | `autorole/setautorole` | ارتقای خودکار اعضای فعال پس از N پیام |
+| `mediaflood` | `mediaflood/setmediaflood` | مهار سیل رسانه‌ای (حذف + هشدار محدود) |
+| `nameguard` | `nameguard` | گارد نام تازه‌واردان (لینک/طول/ایموجی) |
+| `backup` | `backup/restore` | پشتیبان‌گیری/بازیابی JSON تنظیمات گروه |
 
 فرمان‌های خود هسته (بدون پلاگین): `/start`، `/help` (فهرست پویا)، `/plugins`،
 `/plugin load|unload|reload|reloadall` (سودو، پیوی) و
 `/pluginenable <name> <on|off>` (ادمین، برای خاموش‌کردن پلاگین در همان گروه).
+
+## 📡 اتصال زنده به تلگرام (`bot/adapter/`)
+
+همهٔ ۴۴ پلاگین به تلگرام واقعی وصل‌اند: فرمان‌ها و `/help`، رویدادِ پیام‌ها
+(قفل/ضداسپم/mediaflood/autorole/…)، ورود/خروج عضو (کپچا، تأیید ورود، ضد
+راید، nameguard، خوش‌آمد)، کلیک روی دکمه‌های شیشه‌ای (۶ پیشوند: `captcha:`،
+`ja:`، `poll:`، `reportop:`، `vk:`، `lot:`) و اکشن‌های فیزیکی
+(حذف/بن/اخراج/سکوت/ارتقا/بستنِ ورود) — خطوط حسابرسی هم با `/setlog` به کانال
+لاگ می‌روند.
+
+- `bot/adapter/models.py` — مدل‌های پیام (مستقل از pyrogram)؛
+  `bot/adapter/connector.py` — منطق اتصال روی پروتکل duck-typed کلاینت؛
+  `bot/adapter/pyrogram_app.py` — تنها جایی که pyrogram (اختیاری) ایمپورت می‌شود.
+- pyrogram لازم نیست برای تست‌ها: `tests/test_telegram_connector.py` با یک
+  `FakeClient` همهٔ مسیرها را بدون اینترنت می‌سنجد.
+- مستند کامل: [`docs/group-manager/21-advanced8-plugins.md`](../docs/group-manager/21-advanced8-plugins.md)
+  و [`docs/group-manager/22-telegram-live-binding.md`](../docs/group-manager/22-telegram-live-binding.md).
 
 ## ▶️ اجرا
 
@@ -83,13 +107,17 @@ plugins/<name>/plugin.py   ← قابلیت (قرارداد: PLUGIN_VERSION + re
 # بررسی سلامت + کشف خودکار پلاگین‌ها (بدون تلگرام/توکن)
 python3 -m bot.main --check
 
-# تست‌ها (۲۲۶ تست — منطق ناب، بدون تلگرام)
+# تست‌ها (۲۴۱ تست — منطق ناب + اتصال تلگرام با کلاینت جعلی، بدون اینترنت)
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 make test
 
-# اجرای واقعی (بعد از پر کردن .env با BOT_TOKEN) + هات‌ری‌لود
-.venv/bin/pip install -e ".[run]"
-python3 -m bot.main --run --watch
+# اجرای واقعی (اتصال کامل به تلگرام — همهٔ پلاگین‌ها)
+# متغیرهای محیط: BOT_TOKEN + API_ID + API_HASH + OWNER_ID (از .env هم می‌توان
+# با `set -a; source .env; set +a` خواند) — pyrogram اختیاری نصب می‌شود:
+.venv/bin/pip install -e ".[run]" pyrogram
+export BOT_TOKEN=… API_ID=… API_HASH=… OWNER_ID=…
+python3 -m bot.main --run
+python3 -m bot.main --run --watch   # + هات‌ری‌لود پوشهٔ plugins
 ```
 
 ## 🧩 افزودن یک پلاگین جدید (۳۰ ثانیه)

@@ -117,7 +117,7 @@ async def test_report_records_and_notifies(e2e):
         "/report 555 تبلیغ مزاحم در گروه", chat_id=CHAT, user_id=USER1, lang="fa")
     assert out and "گزارش شما" in out[0]
     # خط لاگ گزارش + اطلاع‌رسانی
-    assert any("report" in ln for _, lines in audit for ln in lines)
+    assert any("📮" in ln for _, lines in audit for ln in lines)
     assert any("تبلیغ مزاحم" in ln for _, lines in audit for ln in lines)
     assert outbox and "گزارش" in outbox[-1][1]
     # در دفتر حسابرسی ثبت شد

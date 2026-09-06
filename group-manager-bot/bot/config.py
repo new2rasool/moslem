@@ -51,6 +51,8 @@ class Config:
     """پیکربندی نرمال‌شده و اعتبارسنجی‌شده."""
 
     bot_token: str = ""
+    api_id: int = 0
+    api_hash: str = ""
     owner_id: int = 0
     sudo_ids: tuple[int, ...] = ()
     database_url: str = "sqlite:///data/group-manager.db"
@@ -79,6 +81,8 @@ class Config:
                 raise ConfigError("GMB_LOG_LEVEL نامعتبر است")
             cfg = cls(
                 bot_token=_env("BOT_TOKEN"),
+                api_id=_env_int("API_ID", 0),
+                api_hash=_env("API_HASH"),
                 owner_id=_env_int("OWNER_ID", 0),
                 sudo_ids=_env_int_list("SUDO_IDS"),
                 database_url=_env("GMB_DB_URL", "sqlite:///data/group-manager.db"),
@@ -100,6 +104,8 @@ class Config:
             raise ConfigError("OWNER_ID الزامی است (آیدی عددی مالک ربات)")
         if require_token and not self.bot_token:
             raise ConfigError("BOT_TOKEN الزامی است (از BotFather بگیرید)")
+        if require_token and (not self.api_id or not self.api_hash):
+            raise ConfigError("API_ID و API_HASH الزامی‌اند (از my.telegram.org)")
 
     @property
     def sqlite_path(self) -> Path | None:

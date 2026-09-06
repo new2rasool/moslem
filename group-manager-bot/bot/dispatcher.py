@@ -216,6 +216,8 @@ class Dispatcher:
         chat_id: int | None,
         user_id: int,
         lang: str,
+        sender_name: str = "",
+        sender_username: str = "",
     ) -> list[str] | None:
         matched = self.registry.callback_for(raw_action)
         if matched is None:
@@ -233,6 +235,8 @@ class Dispatcher:
             user_id=user_id,
             chat_id=chat_id,
             lang=lang,
+            sender_name=sender_name,
+            sender_username=sender_username,
         )
         try:
             await binding.handler(ctx)

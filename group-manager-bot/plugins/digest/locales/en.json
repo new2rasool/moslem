@@ -1,0 +1,11 @@
+{
+  "usage": "📎 Usage: digest <minutes {mn}-{mx}> or digest off",
+  "enabled": "✅ Periodic digest enabled (summary every {minutes} min).",
+  "disabled": "🔴 Periodic digest disabled.",
+  "to_channel": "📮 Destination: log channel ({ch})",
+  "to_group": "📮 Destination: this group (no log channel set; use /setlog)",
+  "title": "📊 Periodic digest for group {chat}:",
+  "actions": "Actions recorded today: {n}",
+  "joins": "Joins/leaves this period: {n} in · {m} out",
+  "guards": "Active guards: {names}"
+}

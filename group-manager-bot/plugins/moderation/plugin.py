@@ -83,6 +83,15 @@ def register(api) -> None:
         await api.record_action(
             ctx.chat_id, action, target_id, ctx.user_id, reason=reason, duration_s=duration_s
         )
+        # درخواست اجرای فیزیکی (آداپتور تلگرام از action_sink اجرا می‌کند)
+        _physical = {"ban": "ban", "kick": "kick", "mute": "mute",
+                     "unmute": "unmute", "unban": "unban"}
+        kind = _physical.get(action)
+        if kind:
+            act_kw = {"user_id": target_id, "reason": reason or action}
+            if action == "mute" and duration_s:
+                act_kw["seconds"] = int(duration_s)
+            ctx.act(kind, **act_kw)
         if duration_s:
             ctx.respond(api.tr(ctx.lang, f"done_{action}", name=_name(ctx, api), dur=format_duration(duration_s)))
         else:

@@ -17,6 +17,8 @@ PLUGIN_VERSION = "1.0.0"
 
 # پنجره‌های هر گروه: chat_id → RaidWindow (با تنظیمات لحظهٔ ساخت)
 _windows: dict[int, RaidWindow] = {}
+# گروه‌هایی که قفل ضد رایدشان در جریان است (برای رهاسازی منصفانه)
+_locked_chats: set[int] = set()
 
 
 def _setting(api, chat_id, key, default):
@@ -61,6 +63,7 @@ def register(api) -> None:
             return
         if w.record_join():
             # حمله تشخیص داده شد → قفل + هشدار
+            _locked_chats.add(chat_id)
             ctx.respond(api.tr(ctx.lang, "raid_detected",
                                secs=int(w.remaining())))
             ctx.act("lock_join", reason="raid", seconds=int(w.lock_s or 600))
@@ -83,6 +86,7 @@ def register(api) -> None:
             ctx.respond(api.tr(ctx.lang, "enabled"))
         elif parts[0].lower() in ("off", "خاموش"):
             _put(api, ctx.chat_id, "raid_on", False)
+            _locked_chats.discard(ctx.chat_id)
             _windows.pop(ctx.chat_id, None)
             ctx.respond(api.tr(ctx.lang, "disabled"))
         else:
@@ -94,13 +98,16 @@ def register(api) -> None:
         if cmd in ("on", "روشن"):
             w = _window(api, ctx.chat_id)
             w.force_lock()
+            _locked_chats.add(ctx.chat_id)
             ctx.respond(api.tr(ctx.lang, "locked_manual", secs=int(w.remaining())))
             ctx.act("lock_join", reason="raid:manual", seconds=int(w.remaining()))
         elif cmd in ("off", "خاموش"):
             w = _window(api, ctx.chat_id)
             w.unlock()
+            _locked_chats.discard(ctx.chat_id)
             _windows.pop(ctx.chat_id, None)
             ctx.respond(api.tr(ctx.lang, "unlocked_manual"))
+            ctx.act("unlock_join", reason="raid:manual")
         else:
             ctx.respond(api.tr(ctx.lang, "usage_raid"))
 
@@ -138,12 +145,16 @@ def register(api) -> None:
 async def on_tick(api) -> None:
     """رهاسازی خودکار قفل‌های منقضی (از میزبان)."""
     now = time.monotonic()
-    for chat_id, w in list(_windows.items()):
-        if w.locked(now):
+    for chat_id in list(_locked_chats):
+        w = _windows.get(chat_id)
+        if w is None or w.locked(now):
             continue
         api.host.send_text(chat_id, api.tr("fa", "raid_released"))
+        api.host.push_action(chat_id, {"type": "unlock_join", "reason": "raid:expired"})
+        _locked_chats.discard(chat_id)
         _windows.pop(chat_id, None)
 
 
 def on_unload(api) -> None:
     _windows.clear()
+    _locked_chats.clear()

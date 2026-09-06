@@ -65,7 +65,7 @@ async def test_joinapprove_full_flow(e2e):
     out = await d.dispatch_callback(data_a, chat_id=CHAT, user_id=ADMIN, lang="fa")
     assert out and "تأیید شد" in out[0]
     assert any(a[1].get("type") == "unrestrict" for a in actions)
-    assert any("join_approve" in ln for _, lines in audit for ln in lines)
+    assert any("تأیید ورود" in ln for _, lines in audit for ln in lines)
 
     # رد: کاربر دیگر
     out = await _join(d, 778)

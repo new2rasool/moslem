@@ -49,6 +49,8 @@
 | `18-advanced5-plugins.md` | پلاگین‌های نسل پنجم | polls (نظرسنجی دکمه‌ای)، afk، posthours |
 | `19-advanced6-plugins.md` | هفت پلاگین با جزئیات کامل | joinapprove، rules، antirepeat، slowmode، lookup، newcomer_guard، globalguard |
 | `20-advanced7-plugins.md` | هفت پلاگین با جزئیات کامل (دوم) | security، reportops، announcer، trivia، capsguard، reminder، status |
+| `21-advanced8-plugins.md` | هفت پلاگین با جزئیات کامل (سوم) | votekick، lottery، digest، autorole، mediaflood، nameguard، backup |
+| `22-telegram-live-binding.md` | اتصال زنده به تلگرام | آداپتور (models/connector/pyrogram)، ۱۱۸ فرمان، دکمه‌ها، اکشن‌های فیزیکی، کانال لاگ |
 
 هر فایل مستقل است و میتوانید مستقیم از این فهرست وارد موضوع دلخواه شوید.
 

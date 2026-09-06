@@ -1,0 +1,9 @@
+{
+  "on": "on",
+  "off": "off",
+  "status": "🪪 Newcomer name guard: {state}",
+  "enabled": "✅ Name guard enabled (names/usernames with links, too long or ad emojis → kicked).",
+  "disabled": "🔴 Name guard disabled.",
+  "usage": "📎 Usage: nameguard <on|off>",
+  "kicked": "🪪 User {user} was kicked for an inappropriate name (reason: {why})."
+}

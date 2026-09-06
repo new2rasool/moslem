@@ -48,6 +48,10 @@ _ACTION_LABEL_FA = {
     "auto:mute": "⚡️ خودکار: سکوت",
     "auto:kick": "⚡️ خودکار: اخراج",
     "auto:ban": "⚡️ خودکار: بن",
+    "auto:promote": "⚡️ خودکار: ارتقا",
+    "join_approve": "🚪 تأیید ورود",
+    "join_deny": "🚪 رد ورود",
+    "report": "📮 گزارش",
 }
 
 
