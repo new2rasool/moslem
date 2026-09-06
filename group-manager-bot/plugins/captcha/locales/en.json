@@ -1,0 +1,17 @@
+{
+  "on": "on",
+  "off": "off",
+  "question": "🤖 {user}, to prove you're human pick the correct sum:",
+  "passed": "✅ Verified! Welcome.",
+  "wrong": "❌ Wrong answer. (attempt {tries}/{max}) Try again.",
+  "failed": "🚫 Too many wrong attempts; you were removed.",
+  "expired": "⏰ Time is up.",
+  "expired_kick": "⏰ User {user} didn't pass CAPTCHA in time and was removed.",
+  "none_pending": "ℹ️ No pending CAPTCHA for you.",
+  "status": "🤖 Join CAPTCHA: {state} | timeout: {time}s",
+  "enabled": "✅ Join CAPTCHA enabled.",
+  "disabled": "🔴 Join CAPTCHA disabled (pending challenges cleared).",
+  "usage": "📎 Usage: captcha <on|off>",
+  "usage_time": "📎 Usage: setcaptchatime <10-300 seconds>",
+  "time_set": "✅ CAPTCHA timeout: {t}s"
+}

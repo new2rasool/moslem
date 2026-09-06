@@ -62,6 +62,7 @@ class PluginRecord:
     events: int = 0
     callbacks: int = 0
     api: PluginAPI | None = None
+    module: Any = None  # شیء ماژول بارگذاری‌شده (برای on_tick/on_unload)
 
 
 def _file_hash(path: Path) -> str:
@@ -102,7 +103,71 @@ class PluginHost:
         self._running = False
         # هدفِ رویدادهای داخلی (مثل action_recorded) — آداپتور/تست آن را ست می‌کند
         self.audit_sink: Any = None
+        # سینک ارسال پیام به گروه و سینک اکشن فیزیکی (آداپتور تلگرام/تست)
+        self.out_sink: Any = None
+        self.action_sink: Any = None
+        self._tick_task: asyncio.Task | None = None
         self._register_core_commands()
+
+    # ── خروجی‌های سطح میزبان (برای پلاگین‌ها و وظایف پس‌زمینه) ───────
+    def send_text(self, chat_id: int | None, text: str) -> None:
+        """ارسال پیام به یک گروه (از طریق آداپتور out_sink)."""
+        if not text:
+            return
+        if self.out_sink is not None:
+            try:
+                self.out_sink(chat_id, text)
+            except Exception:  # noqa: BLE001
+                log.exception("out_sink ناموفق بود")
+
+    def push_action(self, chat_id: int | None, action: dict) -> None:
+        """ثبت یک اکشن فیزیکی خارج از Context (مثل اخراج کپچای منقضی)."""
+        if self.action_sink is not None:
+            try:
+                self.action_sink(chat_id, action)
+            except Exception:  # noqa: BLE001
+                log.exception("action_sink (host) ناموفق بود")
+
+    # ── تیک دوره‌ای برای کارهای پس‌زمینهٔ پلاگین‌ها (on_tick) ───────
+    async def tick(self) -> None:
+        """یک بار اجرای on_tick همهٔ پلاگین‌های فعال (تمیزکاری/زمان‌سنجی)."""
+        for name in list(self.records):
+            rec = self.records.get(name)
+            if rec is None or not rec.enabled or rec.module is None or rec.api is None:
+                continue
+            fn = getattr(rec.module, "on_tick", None)
+            if not callable(fn):
+                continue
+            try:
+                await fn(rec.api)
+            except Exception:  # noqa: BLE001
+                log.exception("on_tick پلاگین %s ناموفق بود", name)
+
+    async def start_background(self, interval_s: float = 2.0) -> None:
+        """حلقهٔ پس‌زمینهٔ میزبان (در --run/--watch). پلاگین‌ها با on_tick شرکت می‌کنند."""
+        if self._tick_task is not None:
+            return
+        self._running = True
+
+        async def _loop() -> None:
+            while self._running:
+                try:
+                    await self.tick()
+                except Exception:  # noqa: BLE001
+                    log.exception("خطا در تیک میزبان")
+                await asyncio.sleep(interval_s)
+
+        self._tick_task = asyncio.create_task(_loop())
+
+    async def stop_background(self) -> None:
+        self._running = False
+        if self._tick_task is not None:
+            self._tick_task.cancel()
+            try:
+                await self._tick_task
+            except asyncio.CancelledError:
+                pass
+            self._tick_task = None
 
     # ── انتشار رویداد داخلی (برای پلاگین‌ها — مثل action_recorded) ───
     async def emit(
@@ -254,6 +319,7 @@ class PluginHost:
                 ),
                 callbacks=sum(1 for c in self.registry.callbacks() if c.plugin == name),
                 api=api,
+                module=module,
             )
             self.records[name] = record
             log.info("پلاگین بارگذاری شد: %s v%s (%s فرمان)", name, record.version, record.commands)
@@ -335,9 +401,14 @@ class PluginHost:
         if record is None:
             return False
         removed = self.registry.remove_plugin(name)
-        api = record.api
-        if api is not None and hasattr(api, "_unload_hook"):
-            pass  # جای توسعه: on_unload از ماژول
+        module = record.module
+        if module is not None:
+            hook = getattr(module, "on_unload", None)
+            if callable(hook):
+                try:
+                    hook(record.api)
+                except Exception:  # noqa: BLE001
+                    log.exception("on_unload پلاگین %s ناموفق بود", name)
         log.info("پلاگین حذف شد: %s (%s فرمان)", name, removed)
         return True
 

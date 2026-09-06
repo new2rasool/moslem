@@ -43,6 +43,7 @@
 | `12-plugin-architecture.md` | معماری پلاگین | کشف خودکار، قرارداد پلاگین، هات‌ری‌لود، مدیریت، مرزهای امنیتی |
 | `13-advanced-plugins.md` | پلاگین‌های پیشرفته | moderation، antiflood، greeter v2، سوئیچ گروهی پلاگین‌ها |
 | `14-professional-plugins.md` | پلاگین‌های حرفه‌ای | locks، wordguard، audit (کانال لاگ)، roles_admin، اکشن ساختاریافته |
+| `15-advanced2-plugins.md` | پلاگین‌های پیشرفتهٔ نسل دوم | captcha تعاملی، antiraid، filters + on_tick/دکمه‌ها |
 
 هر فایل مستقل است و میتوانید مستقیم از این فهرست وارد موضوع دلخواه شوید.
 

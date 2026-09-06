@@ -15,10 +15,17 @@ class _Sender:
 
     def __init__(self) -> None:
         self.messages: list[str] = []
+        self.keyboards: list[list[list[dict]]] = []
 
     def respond(self, text: str) -> None:
         if text:
             self.messages.append(text)
+
+    def respond_buttons(self, text: str, buttons: list[list[dict]]) -> None:
+        """پیام + صفحه‌کلید شیشه‌ای (آداپتور دکمه‌ها را می‌سازد؛ داده به callback می‌رود)."""
+        if text:
+            self.messages.append(text)
+        self.keyboards.append(buttons or [])
 
 
 def _act(actions: list[dict], kind: str, **kw) -> None:
@@ -46,11 +53,17 @@ class CommandContext:
     reply_to_user_id: int | None = None
     reply_to_user_name: str = ""
     actions: list = field(default_factory=list)
+    keyboards: list = field(default_factory=list)
     _sender: _Sender = field(default_factory=_Sender, repr=False)
 
     def respond(self, text: str) -> None:
         """افزودن پیام خروجی (پاسخ به فرمان)."""
         self._sender.respond(text)
+
+    def respond_buttons(self, text: str, buttons: list[list[dict]]) -> None:
+        """پیام + دکمه‌های شیشه‌ای (دادهٔ هر دکمه برای callback استفاده می‌شود)."""
+        self.respond(text)
+        self.keyboards.append(buttons or [])
 
     def act(self, kind: str, **kw) -> None:
         """درخواست یک اکشن فیزیکی از آداپتور (مثل delete/restrict/ban)."""
@@ -73,10 +86,15 @@ class EventContext:
     user_username: str = ""
     data: dict = field(default_factory=dict)
     actions: list = field(default_factory=list)
+    keyboards: list = field(default_factory=list)
     _sender: _Sender = field(default_factory=_Sender, repr=False)
 
     def respond(self, text: str) -> None:
         self._sender.respond(text)
+
+    def respond_buttons(self, text: str, buttons: list[list[dict]]) -> None:
+        self.respond(text)
+        self.keyboards.append(buttons or [])
 
     def act(self, kind: str, **kw) -> None:
         """درخواست یک اکشن فیزیکی از آداپتور (مثل delete_message/restrict)."""
@@ -100,10 +118,15 @@ class CallbackContext:
     chat_id: int | None = None
     lang: str = "fa"
     actions: list = field(default_factory=list)
+    keyboards: list = field(default_factory=list)
     _sender: _Sender = field(default_factory=_Sender, repr=False)
 
     def respond(self, text: str) -> None:
         self._sender.respond(text)
+
+    def respond_buttons(self, text: str, buttons: list[list[dict]]) -> None:
+        self.respond(text)
+        self.keyboards.append(buttons or [])
 
     def act(self, kind: str, **kw) -> None:
         _act(self.actions, kind, **kw)

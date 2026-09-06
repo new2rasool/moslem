@@ -222,6 +222,10 @@ def cmd_run(cfg: Config, watch: bool = False) -> int:
         watcher = loop.create_task(host.watch_loop(1.0))
         print("👀 نظارت بر پوشهٔ پلاگین‌ها فعال است (هات‌ری‌لود)")
 
+    # حلقهٔ پس‌زمینه برای on_tick پلاگین‌ها (انقضای کپچا، رهاسازی راید و…)
+    loop = asyncio.get_event_loop()
+    loop.create_task(host.start_background(2.0))
+
     log.info("ربات در حال اجراست (هستهٔ پلاگین‌محور).")
     try:
         app.run()

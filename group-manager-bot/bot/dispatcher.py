@@ -47,6 +47,8 @@ class Dispatcher:
         self.plugin_enabled = plugin_enabled
         # دریافت «اکشن‌های ساختاریافته» تولیدشده توسط پلاگین‌ها (اجرای فیزیکی با آداپتور)
         self.action_sink = action_sink
+        # آخرین صفحه‌کلید تولیدشده (برای آداپتور/تست؛ هر پیامِ دارای دکمه آن را ست می‌کند)
+        self.last_keyboard: list[list[dict]] | None = None
 
     # ── ابزار ───────────────────────────────────────────────────────
     def _denied_text(self, lang: str, required: AccessLevel) -> str:
@@ -166,6 +168,8 @@ class Dispatcher:
 
     def _flush_actions(self, chat_id: int | None, ctx) -> None:
         """اگر پلاگین «اکشن ساختاریافته» ثبت کرده باشد، به action_sink می‌دهد."""
+        if getattr(ctx, "keyboards", None):
+            self.last_keyboard = ctx.keyboards[-1]
         if self.action_sink is None or not ctx.actions:
             return
         for action in ctx.actions:

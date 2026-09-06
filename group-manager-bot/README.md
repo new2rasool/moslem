@@ -46,6 +46,9 @@ plugins/<name>/plugin.py   ← قابلیت (قرارداد: PLUGIN_VERSION + re
 | `wordguard` | `addblacklist/rmblacklist/…` | فیلتر کلمات سیاه با نرمال‌سازی ضد دورزدن |
 | `audit` | `setlog/log/logtest` | کانال لاگ: قالب‌بندی خودکار action_recorded |
 | `roles_admin` | `promote/demote/adminlist` | ارتقا/عزل با سلسله‌مراتب + ثبت در حسابرسی |
+| `captcha` | رویداد ورود عضو + دکمه‌های شیشه‌ای | کپچای ورود تعاملی + اخراج خودکار در مهلت |
+| `antiraid` | `antiraid/raid/raidset` | تشخیص موج ورود + قفل خودکار و رهاسازی |
+| `filters` | `addfilter/rmfilter/filters` | پاسخ خودکار کلیدواژه‌ای با نرمال‌سازی |
 
 فرمان‌های خود هسته (بدون پلاگین): `/start`، `/help` (فهرست پویا)، `/plugins`،
 `/plugin load|unload|reload|reloadall` (سودو، پیوی) و
@@ -57,7 +60,7 @@ plugins/<name>/plugin.py   ← قابلیت (قرارداد: PLUGIN_VERSION + re
 # بررسی سلامت + کشف خودکار پلاگین‌ها (بدون تلگرام/توکن)
 python3 -m bot.main --check
 
-# تست‌ها (۱۵۸ تست — منطق ناب، بدون تلگرام)
+# تست‌ها (۱۶۹ تست — منطق ناب، بدون تلگرام)
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 make test
 
@@ -117,7 +120,7 @@ bot/
 ├── db/  cache/  i18n/ config.py  logging_setup.py
 └── handlers/base.py   # ابزار چک دسترسی (برای آداپتورها)
 plugins/               # ← همهٔ قابلیت‌ها این‌جا (کشف خودکار)
-tests/                 # ۱۵۸ تست (unit + پلاگین + E2E بدون تلگرام)
+tests/                 # ۱۶۹ تست (unit + پلاگین + E2E بدون تلگرام)
 ```
 
 ## 🛣 وضعیت و قدم‌های بعدی
