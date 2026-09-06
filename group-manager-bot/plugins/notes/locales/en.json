@@ -1,0 +1,11 @@
+{
+  "usage": "📎 Usage: note <save|get|del|list> <name> [text]",
+  "bad_name": "❌ Invalid note name.",
+  "not_found": "❌ Note «{name}» not found.",
+  "saved": "✅ Note «{name}» saved (total: {total}).",
+  "deleted": "✅ Note «{name}» deleted.",
+  "empty": "📭 No notes saved yet.",
+  "list_header": "🗂 {n} notes (send any #name in the group to get it):",
+  "admin_only": "🔒 Only admins can do that.",
+  "too_long": "❌ Note text exceeds {max} characters."
+}

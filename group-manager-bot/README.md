@@ -49,6 +49,9 @@ plugins/<name>/plugin.py   ← قابلیت (قرارداد: PLUGIN_VERSION + re
 | `captcha` | رویداد ورود عضو + دکمه‌های شیشه‌ای | کپچای ورود تعاملی + اخراج خودکار در مهلت |
 | `antiraid` | `antiraid/raid/raidset` | تشخیص موج ورود + قفل خودکار و رهاسازی |
 | `filters` | `addfilter/rmfilter/filters` | پاسخ خودکار کلیدواژه‌ای با نرمال‌سازی |
+| `levels` | `rank/top/levels/xpcooldown` | سیستم XP و سطح با اعلام صعود |
+| `stats` | `stats/mystats/resetstats` | آمار زندهٔ گروه (نوع پیام/امروز/برترین‌ها) |
+| `notes` | `note/notes/savenote/delnote` | یادداشت‌های گروهی با تریگر #نام |
 
 فرمان‌های خود هسته (بدون پلاگین): `/start`، `/help` (فهرست پویا)، `/plugins`،
 `/plugin load|unload|reload|reloadall` (سودو، پیوی) و
@@ -60,7 +63,7 @@ plugins/<name>/plugin.py   ← قابلیت (قرارداد: PLUGIN_VERSION + re
 # بررسی سلامت + کشف خودکار پلاگین‌ها (بدون تلگرام/توکن)
 python3 -m bot.main --check
 
-# تست‌ها (۱۶۹ تست — منطق ناب، بدون تلگرام)
+# تست‌ها (۱۸۳ تست — منطق ناب، بدون تلگرام)
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 make test
 
@@ -120,7 +123,7 @@ bot/
 ├── db/  cache/  i18n/ config.py  logging_setup.py
 └── handlers/base.py   # ابزار چک دسترسی (برای آداپتورها)
 plugins/               # ← همهٔ قابلیت‌ها این‌جا (کشف خودکار)
-tests/                 # ۱۶۹ تست (unit + پلاگین + E2E بدون تلگرام)
+tests/                 # ۱۸۳ تست (unit + پلاگین + E2E بدون تلگرام)
 ```
 
 ## 🛣 وضعیت و قدم‌های بعدی

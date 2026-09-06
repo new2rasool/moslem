@@ -1,0 +1,10 @@
+{
+  "header": "📊 Group stats {chat}:",
+  "messages": "💬 Messages — today: {today} | session: {total}",
+  "joins": "👥 Joins/leaves — today: {today} | total: {total} | left: {leaves}",
+  "top_today": "🔥 Most active today:",
+  "no_activity": "No activity recorded yet.",
+  "no_activity_user": "📭 You haven't sent any message in this group yet.",
+  "mystats": "📈 {name} — your messages in this group: {count}",
+  "reset": "✅ Stats for this group were reset."
+}
