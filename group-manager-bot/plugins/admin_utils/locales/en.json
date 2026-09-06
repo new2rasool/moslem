@@ -1,0 +1,5 @@
+{
+  "usage": "📎 Usage: `duration <time>`  —  e.g. duration 1d6h30m",
+  "invalid": "❌ «{raw}» is not a valid duration.\nUnits: s, m, h, d, w — combinable: 1d6h30m",
+  "result": "⏱ «{raw}» = {seconds} seconds\n(human: {human})"
+}

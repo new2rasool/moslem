@@ -1,0 +1,7 @@
+{
+  "whoami_out": "👤 نام: {name}\n🆔 آیدی: {id}\n📛 یوزرنیم: {username}\n{group_line}🎖 سطح دسترسی: {level}\n",
+  "group_line": "👥 گروه: {chat} ({chat_id})\n",
+  "anonymous": "ناشناس",
+  "your_id": "🆔 آیدی شما: {id}",
+  "chat_id": "🆔 آیدی این گروه: {id}"
+}

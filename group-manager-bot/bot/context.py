@@ -1,0 +1,94 @@
+"""
+زمینه‌های (Context) اجرا — اشیای مستقل از ترنسپورت که به دستورهای پلاگین داده می‌شوند.
+
+هر هندلر فقط یک Context می‌گیرد و با ctx.respond(...) پیام می‌فرستد؛ این‌که پیام در
+تلگرام ارسال شود یا در تست جمع شود، به «آداپتور» واگذار می‌شود (جداسازی کامل از تلگرام).
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+
+class _Sender:
+    """مجموعه‌کنندهٔ پیام‌های خروجی (آداپتور بعد از هندلر آن‌ها را می‌فرستد)."""
+
+    def __init__(self) -> None:
+        self.messages: list[str] = []
+
+    def respond(self, text: str) -> None:
+        if text:
+            self.messages.append(text)
+
+
+@dataclass
+class CommandContext:
+    """زمینهٔ یک فرمان اجراشده.
+
+    chat_id برای پیام خصوصی None است.
+    """
+
+    plugin: str
+    command: str
+    args: str
+    raw_text: str
+    user_id: int
+    chat_id: int | None = None
+    is_private: bool = False
+    lang: str = "fa"
+    sender_name: str = ""
+    sender_username: str = ""
+    reply_to_user_id: int | None = None
+    reply_to_user_name: str = ""
+    _sender: _Sender = field(default_factory=_Sender, repr=False)
+
+    def respond(self, text: str) -> None:
+        """افزودن پیام خروجی (پاسخ به فرمان)."""
+        self._sender.respond(text)
+
+    @property
+    def outgoing(self) -> list[str]:
+        return self._sender.messages
+
+
+@dataclass
+class EventContext:
+    """زمینهٔ یک رویداد (مثل پیوستن عضو) برای پخش بین پلاگین‌ها."""
+
+    kind: str
+    chat_id: int | None
+    lang: str = "fa"
+    user_id: int | None = None
+    user_name: str = ""
+    user_username: str = ""
+    data: dict = field(default_factory=dict)
+    _sender: _Sender = field(default_factory=_Sender, repr=False)
+
+    def respond(self, text: str) -> None:
+        self._sender.respond(text)
+
+    @property
+    def outgoing(self) -> list[str]:
+        return self._sender.messages
+
+
+@dataclass
+class CallbackContext:
+    """زمینهٔ کلیک روی دکمهٔ شیشه‌ای (inline callback)."""
+
+    plugin: str
+    prefix: str
+    action: str          # بخشی که پلاگین خودش تعریف می‌کند (مثلاً "approve")
+    payload: str         # دادهٔ خام پس از prefix
+    raw_action: str      # کل اکشن (prefix + action + payload)
+    user_id: int
+    chat_id: int | None = None
+    lang: str = "fa"
+    _sender: _Sender = field(default_factory=_Sender, repr=False)
+
+    def respond(self, text: str) -> None:
+        self._sender.respond(text)
+
+    @property
+    def outgoing(self) -> list[str]:
+        return self._sender.messages

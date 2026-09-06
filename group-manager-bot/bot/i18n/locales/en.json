@@ -1,0 +1,20 @@
+{
+  "start_user": "Hello {name} 👋\nI'm a modular group management bot.\nThe command list is built automatically from loaded plugins: /help",
+  "cmd_denied": "⛔ Access denied. This command requires level «{level}» or higher.",
+  "cmd_unknown": "🤔 Unknown command. Try /help",
+  "cmd_private_only": "🔒 This command only works in the bot's private chat.",
+  "cmd_group_only": "👥 This command only works inside a group.",
+  "cmd_error": "⚠️ Something went wrong. Please try again later.",
+  "help_header": "🤖 Bot help — {count} commands from {plugins} plugins:\n",
+  "help_usage": "    📎 Usage: {usage}",
+  "help_footer": "\n🔄 This list is built automatically from loaded plugins.",
+  "plugins_header": "🧩 Loaded plugins ({n}):\n",
+  "plugin_reloaded_all": "✅ {n} plugins checked/updated: {names}",
+  "plugin_already": "ℹ️ Plugin «{name}» is already {state}.",
+  "plugin_ok_loaded": "✅ Plugin «{name}» loaded.",
+  "plugin_ok_unloaded": "✅ Plugin «{name}» unloaded.",
+  "plugin_ok_reloaded": "🔄 Plugin «{name}» reloaded.",
+  "plugin_load_fail": "❌ Failed to load plugin «{name}» (see logs).",
+  "plugin_not_found": "❌ Plugin «{name}» not found.",
+  "plugin_bad_action": "⚠️ Invalid action: {action}\nUsage: plugin <list|load|unload|reload|reloadall> [name]"
+}
