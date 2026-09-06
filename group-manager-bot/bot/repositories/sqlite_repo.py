@@ -6,7 +6,15 @@ import json
 import sqlite3
 
 from bot.db.engine import Database
-from bot.repositories.base import Group, GroupRepo, RoleRepo, User, UserRepo
+from bot.repositories.base import (
+    ActionRepo,
+    Group,
+    GroupRepo,
+    RoleRepo,
+    User,
+    UserRepo,
+    WarnRepo,
+)
 
 
 def _load_settings(raw: str) -> dict:
@@ -132,3 +140,85 @@ class SqliteRoleRepo(RoleRepo):
                 "SELECT user_id, role, title FROM group_roles WHERE chat_id=? ORDER BY created_at", (chat_id,)
             ).fetchall()
         return [(r["user_id"], r["role"], r["title"]) for r in rows]
+
+
+class SqliteWarnRepo(WarnRepo):
+    def __init__(self, db: Database) -> None:
+        self._db = db
+
+    def add(self, chat_id: int, user_id: int, reason: str = "", by_user: int = 0) -> int:
+        with self._db.connection() as conn:
+            conn.execute(
+                "INSERT INTO warns (chat_id, user_id, reason, by_user) VALUES (?, ?, ?, ?)",
+                (chat_id, user_id, reason, by_user),
+            )
+        return self.count(chat_id, user_id)
+
+    def count(self, chat_id: int, user_id: int) -> int:
+        with self._db.connection() as conn:
+            row = conn.execute(
+                "SELECT COUNT(*) AS n FROM warns WHERE chat_id=? AND user_id=?",
+                (chat_id, user_id),
+            ).fetchone()
+        return int(row["n"])
+
+    def remove_last(self, chat_id: int, user_id: int) -> int:
+        with self._db.connection() as conn:
+            conn.execute(
+                "DELETE FROM warns WHERE id = ("
+                " SELECT id FROM warns WHERE chat_id=? AND user_id=?"
+                " ORDER BY id DESC LIMIT 1)",
+                (chat_id, user_id),
+            )
+        return self.count(chat_id, user_id)
+
+    def reset(self, chat_id: int, user_id: int) -> None:
+        with self._db.connection() as conn:
+            conn.execute("DELETE FROM warns WHERE chat_id=? AND user_id=?", (chat_id, user_id))
+
+    def last_reason(self, chat_id: int, user_id: int) -> str:
+        with self._db.connection() as conn:
+            row = conn.execute(
+                "SELECT reason FROM warns WHERE chat_id=? AND user_id=? ORDER BY id DESC LIMIT 1",
+                (chat_id, user_id),
+            ).fetchone()
+        return row["reason"] if row else ""
+
+
+class SqliteActionRepo(ActionRepo):
+    def __init__(self, db: Database) -> None:
+        self._db = db
+
+    def add(
+        self,
+        chat_id: int,
+        action: str,
+        target_user: int,
+        by_user: int,
+        reason: str = "",
+        duration_s: int | None = None,
+    ) -> int:
+        with self._db.connection() as conn:
+            cur = conn.execute(
+                "INSERT INTO actions (chat_id, action, target_user, by_user, reason, duration_s)"
+                " VALUES (?, ?, ?, ?, ?, ?)",
+                (chat_id, action, target_user, by_user, reason, duration_s),
+            )
+        return int(cur.lastrowid)
+
+    def recent(self, chat_id: int, limit: int = 10) -> list[dict]:
+        with self._db.connection() as conn:
+            rows = conn.execute(
+                "SELECT id, action, target_user, by_user, reason, duration_s, created_at"
+                " FROM actions WHERE chat_id=? ORDER BY id DESC LIMIT ?",
+                (chat_id, limit),
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def count_today(self, chat_id: int) -> int:
+        with self._db.connection() as conn:
+            row = conn.execute(
+                "SELECT COUNT(*) AS n FROM actions WHERE chat_id=? AND date(created_at)=date('now')",
+                (chat_id,),
+            ).fetchone()
+        return int(row["n"])

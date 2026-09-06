@@ -72,6 +72,8 @@ class PluginAPI:
         groups: "GroupRepo",
         users: "UserRepo",
         roles: "RoleRepo",
+        warns: "WarnRepo | None" = None,
+        actions: "ActionRepo | None" = None,
         source_dir: Path,
     ) -> None:
         self.name = name
@@ -83,6 +85,8 @@ class PluginAPI:
         self.groups = groups
         self.users = users
         self.roles = roles
+        self.warns = warns
+        self.actions = actions
         self.source_dir = source_dir
         self._registry = registry
         self._log = logging.getLogger(f"plugin.{name}")
@@ -96,6 +100,18 @@ class PluginAPI:
     def tr(self, lang: str, key: str, **fmt: Any) -> str:
         """ترجمهٔ حوزهٔ پلاگین (کلیدهای خودِ پلاگین، سپس fallback به هسته)."""
         return self._translator.t(lang, key, **fmt)
+
+    # ── فعال/غیرفعال بودن پلاگین در یک گروه ─────────────────────────
+    def is_enabled(self, chat_id: int | None) -> bool:
+        """آیا این پلاگین در گروهِ مشخص فعال است؟ (برای چت خصوصی همیشه بله)"""
+        if self.host is None or chat_id is None:
+            return True
+        return self.host.is_plugin_enabled(chat_id, self.name)
+
+    def set_enabled(self, chat_id: int, enabled: bool) -> None:
+        """فعال/غیرفعال‌کردن این پلاگین در گروه (ذخیره در تنظیمات گروه)."""
+        if self.host is not None:
+            self.host.set_plugin_enabled(chat_id, self.name, enabled)
 
     # ── ثبت فرمان ───────────────────────────────────────────────────
     def register_command(

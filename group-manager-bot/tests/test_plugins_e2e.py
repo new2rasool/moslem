@@ -2,61 +2,13 @@
 
 اثبات: پلاگین‌ها در پوشهٔ plugins خودکار کشف می‌شوند، فرمان‌هایشان از مسیریاب
 هسته اجرا می‌شود و رویدادها بینشان پخش می‌شود — بدون هیچ تغییری در هسته.
+
+فیکسچر e2e در tests/conftest.py تعریف شده است.
 """
 
 from __future__ import annotations
 
-import shutil
-from pathlib import Path
-
 import pytest
-
-from bot.cache.cache import MemoryCache
-from bot.config import Config
-from bot.db.engine import Database
-from bot.i18n.loader import Translator
-from bot.plugin_host import PluginHost
-from bot.registry import Registry
-from bot.repositories.sqlite_repo import SqliteGroupRepo, SqliteRoleRepo, SqliteUserRepo
-from bot.services.access_service import AccessService
-
-REAL_PLUGINS = Path(__file__).resolve().parents[1] / "plugins"
-
-
-def _copy_real_plugins(dst: Path) -> None:
-    """کپی پلاگین‌های نمونه در پوشهٔ موقت (برای تست بدون دست‌زدن به سورس)."""
-    dst.mkdir(parents=True, exist_ok=True)
-    for folder in REAL_PLUGINS.iterdir():
-        if folder.is_dir() and (folder / "plugin.py").is_file():
-            shutil.copytree(folder, dst / folder.name, dirs_exist_ok=True)
-
-
-@pytest.fixture()
-def e2e(tmp_path):
-    db = Database(tmp_path / "e2e.db")
-    db.init_schema()
-    groups, users, roles = SqliteGroupRepo(db), SqliteUserRepo(db), SqliteRoleRepo(db)
-    cfg = Config(owner_id=1, sudo_ids=(2,), default_lang="fa")
-    access = AccessService(roles, owner_id=1, sudo_ids=(2,))
-    plugins_dir = tmp_path / "plugins"
-    _copy_real_plugins(plugins_dir)
-    host = PluginHost(
-        cfg=cfg,
-        plugins_dir=plugins_dir,
-        translator=Translator(),
-        registry=Registry(),
-        access=access,
-        cache=MemoryCache(),
-        groups=groups,
-        users=users,
-        roles=roles,
-    )
-    host.load_all()
-
-    from bot.dispatcher import Dispatcher
-
-    d = Dispatcher(host.registry, access, Translator(), default_lang="fa")
-    return host, d, groups, roles, plugins_dir
 
 
 def test_all_sample_plugins_auto_discovered(e2e):

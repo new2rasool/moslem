@@ -1,0 +1,11 @@
+{
+  "on": "on",
+  "off": "off",
+  "status": "🚦 Anti-flood: {state}\n📊 threshold: {count} msgs / {window}s",
+  "enabled": "✅ Anti-flood enabled.",
+  "disabled": "🔴 Anti-flood disabled.",
+  "usage": "📎 Usage: antiflood <on|off>",
+  "usage_set": "📎 Usage: setflood <count 1-30> <seconds 1-60>",
+  "set_ok": "✅ Anti-flood threshold: {count} msgs / {window}s",
+  "warning": "⚠️ User {user_id} is flooding! Please slow down. (auto action: temp mute)"
+}

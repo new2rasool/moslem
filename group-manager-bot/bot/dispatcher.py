@@ -19,7 +19,7 @@ from typing import Callable
 from bot.context import CallbackContext, CommandContext, EventContext
 from bot.domain.roles import AccessLevel, LEVEL_LABELS_EN, LEVEL_LABELS_FA
 from bot.i18n.loader import Translator
-from bot.registry import CommandBinding, Registry
+from bot.registry import CORE_PLUGIN, CommandBinding, Registry
 from bot.services.access_service import AccessService
 
 log = logging.getLogger("dispatcher")
@@ -27,6 +27,7 @@ log = logging.getLogger("dispatcher")
 PREFIXES = ("/", "!", ".")
 
 LangResolver = Callable[[int | None, int | None, bool], str]
+PluginEnabled = Callable[[int | None, str], bool]  # (chat_id, plugin) → فعال؟
 
 
 class Dispatcher:
@@ -36,11 +37,13 @@ class Dispatcher:
         access: AccessService,
         translator: Translator,
         default_lang: str = "fa",
+        plugin_enabled: PluginEnabled | None = None,
     ) -> None:
         self.registry = registry
         self.access = access
         self.translator = translator
         self.default_lang = default_lang
+        self.plugin_enabled = plugin_enabled
 
     # ── ابزار ───────────────────────────────────────────────────────
     def _denied_text(self, lang: str, required: AccessLevel) -> str:
@@ -121,6 +124,15 @@ class Dispatcher:
             return [self.translator.t(lang, "cmd_private_only")]
         if binding.group_only and (chat_id is None or is_private):
             return [self.translator.t(lang, "cmd_group_only")]
+
+        # اگر پلاگین در این گروه غیرفعال باشد، فرمانش خاموش است (بی‌صدا)
+        if (
+            self.plugin_enabled is not None
+            and chat_id is not None
+            and binding.plugin != CORE_PLUGIN
+            and not self.plugin_enabled(chat_id, binding.plugin)
+        ):
+            return None
 
         # سطح دسترسی
         actual = self.access.level(chat_id, user_id)

@@ -21,6 +21,8 @@ CallbackHandler = Callable[[CallbackContext], Awaitable[Any]]
 # ── نام رویدادهای استاندارد (در فازهای بعدی گسترش می‌یابد) ───────────
 EVENT_MEMBER_JOINED = "member_joined"
 EVENT_MEMBER_LEFT = "member_left"
+EVENT_MESSAGE = "message"
+EVENT_CALLBACK = "callback"
 
 CORE_PLUGIN = "<core>"  # نام ثبت‌نامیِ فرمان‌های سیستم (میزبان خود هسته)
 

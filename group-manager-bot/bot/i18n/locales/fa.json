@@ -16,5 +16,9 @@
   "plugin_ok_reloaded": "🔄 پلاگین «{name}» دوباره بارگذاری شد.",
   "plugin_load_fail": "❌ بارگذاری پلاگین «{name}» ناموفق بود (لاگ را ببینید).",
   "plugin_not_found": "❌ پلاگین «{name}» پیدا نشد.",
-  "plugin_bad_action": "⚠️ اکشن نامعتبر: {action}\nکاربرد: plugin <list|load|unload|reload|reloadall> [name]"
+  "plugin_bad_action": "⚠️ اکشن نامعتبر: {action}\nکاربرد: plugin <list|load|unload|reload|reloadall> [name]",
+  "plugins_total": "Σ {n} فرمان کل",
+  "plugin_ok_enabled": "🟢 پلاگین «{name}» در این گروه فعال شد.",
+  "plugin_ok_disabled": "🔴 پلاگین «{name}» در این گروه غیرفعال شد.",
+  "plugin_group_usage": "📎 کاربرد: pluginenable <name> <on|off>"
 }

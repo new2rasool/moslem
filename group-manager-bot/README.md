@@ -35,10 +35,13 @@ plugins/<name>/plugin.py   ← قابلیت (قرارداد: PLUGIN_VERSION + re
 | `ping` | `/ping`, «پینگ» | ساده‌ترین فرمان + ترجمهٔ اختصاصی |
 | `whoami` | `/whoami`, `/id` | دسترسی به `api.access` برای نمایش سطح کاربر |
 | `admin_utils` | `/duration 1d6h30m` (MOD+) | چک سطح دسترسی توسط هسته + استفاده از domain |
-| `greeter` | رویداد «عضو جدید» | ثبت رویداد + خواندن تنظیمات گروه |
+| `greeter` | رویداد ورود/خروج عضو + `setgreet` | رویدادمحور + متن سفارشی گروه |
+| `moderation` | `ban/kick/mute/tmute/warn/recent` | تنبیه پلکانی + مصونیت سطوح + دفتر حسابرسی |
+| `antiflood` | رویداد `message` + `setflood` | ضد سیل پنجره‌ای + معافیت ادمین |
 
 فرمان‌های خود هسته (بدون پلاگین): `/start`، `/help` (فهرست پویا)، `/plugins`،
-`/plugin load|unload|reload|reloadall` (سودو، پیوی).
+`/plugin load|unload|reload|reloadall` (سودو، پیوی) و
+`/pluginenable <name> <on|off>` (ادمین، برای خاموش‌کردن پلاگین در همان گروه).
 
 ## ▶️ اجرا
 
@@ -46,7 +49,7 @@ plugins/<name>/plugin.py   ← قابلیت (قرارداد: PLUGIN_VERSION + re
 # بررسی سلامت + کشف خودکار پلاگین‌ها (بدون تلگرام/توکن)
 python3 -m bot.main --check
 
-# تست‌ها (۱۱۰+ تست — منطق ناب، بدون تلگرام)
+# تست‌ها (۱۳۱ تست — منطق ناب، بدون تلگرام)
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 make test
 
@@ -106,17 +109,18 @@ bot/
 ├── db/  cache/  i18n/ config.py  logging_setup.py
 └── handlers/base.py   # ابزار چک دسترسی (برای آداپتورها)
 plugins/               # ← همهٔ قابلیت‌ها این‌جا (کشف خودکار)
-tests/                 # ۱۱۰+ تست (unit + پلاگین + E2E بدون تلگرام)
+tests/                 # ۱۳۱ تست (unit + پلاگین + E2E بدون تلگرام)
 ```
 
 ## 🛣 وضعیت و قدم‌های بعدی
 
 - ✅ فاز ۰–۱: اسکلت لایه‌ای + هستهٔ پلاگین‌محور + کشف/ری‌لود خودکار + i18n + نقش/دسترسی
-- ⏭️ فاز ۲: آداپتور کامل Pyrogram (کشف خالق گروه، callback های واقعی)، middleware ضد سیل،
-  سپس تبدیل ماژول‌های سند (کپچا، قفل‌ها، هشدار و…) به پلاگین‌های مستقل.
+- ⏭️ فاز ۲: آداپتور کامل Pyrogram (کشف خالق گروه، callback های واقعی، اجرای فیزیکی
+  ban/mute)، سپس تبدیل ماژول‌های سند (قفل‌ها، فیلتر کلمات، CAPTCHA و…) به پلاگین‌های مستقل.
 
 ## 📚 مستندات مرتبط
 
-- [`docs/group-manager/`](../docs/group-manager/README.md) — کتابخانهٔ کامل مشخصات (۱۲ سند)
+- [`docs/group-manager/`](../docs/group-manager/README.md) — کتابخانهٔ کامل مشخصات (۱۳ سند)
 - `docs/group-manager/11-development-workflow.md` — فرایند توسعه (چرا این‌گونه ساختیم)
 - `docs/group-manager/12-plugin-architecture.md` — قرارداد و جزئیات پلاگین‌ها
+- `docs/group-manager/13-advanced-plugins.md` — پلاگین‌های پیشرفتهٔ پیاده‌سازی‌شده

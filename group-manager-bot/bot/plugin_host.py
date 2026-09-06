@@ -35,7 +35,13 @@ if TYPE_CHECKING:  # pragma: no cover
     from bot.cache.cache import Cache
     from bot.config import Config
     from bot.registry import Registry
-    from bot.repositories.base import GroupRepo, RoleRepo, UserRepo
+    from bot.repositories.base import (
+        ActionRepo,
+        GroupRepo,
+        RoleRepo,
+        UserRepo,
+        WarnRepo,
+    )
     from bot.services.access_service import AccessService
 
 log = logging.getLogger("pluginhost")
@@ -77,6 +83,8 @@ class PluginHost:
         groups: "GroupRepo",
         users: "UserRepo",
         roles: "RoleRepo",
+        warns: "WarnRepo | None" = None,
+        actions: "ActionRepo | None" = None,
     ) -> None:
         self.cfg = cfg
         self.plugins_dir = plugins_dir
@@ -87,10 +95,35 @@ class PluginHost:
         self.groups = groups
         self.users = users
         self.roles = roles
+        self.warns = warns
+        self.actions = actions
         self.records: dict[str, PluginRecord] = {}
         self._hashes: dict[str, str] = {}  # path → sha256
         self._running = False
         self._register_core_commands()
+
+    # ── فعال/غیرفعال بودن پلاگین در هر گروه (تنظیمات گروه) ──────────
+    def is_plugin_enabled(self, chat_id: int | None, plugin: str) -> bool:
+        """پیش‌فرض: فعال؛ مدیر می‌تواند در settings['plugins'][name] خاموشش کند."""
+        if chat_id is None:
+            return True
+        group = self.groups.get(chat_id)
+        if group is None:
+            return True
+        return group.settings.get("plugins", {}).get(plugin, True)
+
+    def set_plugin_enabled(self, chat_id: int, plugin: str, enabled: bool) -> None:
+        if plugin not in self.records and plugin != "<core>":
+            raise KeyError(plugin)
+        group = self.groups.get(chat_id)
+        from bot.repositories.base import Group
+
+        if group is None:
+            group = Group(chat_id=chat_id, settings={})
+        plugins = dict(group.settings.get("plugins", {}))
+        plugins[plugin] = bool(enabled)
+        group.settings["plugins"] = plugins
+        self.groups.upsert(group)
 
     # ── فرمان‌های سیستمی میزبان (خودِ هسته) ─────────────────────────
     def _register_core_commands(self) -> None:
@@ -109,6 +142,8 @@ class PluginHost:
             groups=self.groups,
             users=self.users,
             roles=self.roles,
+            warns=self.warns,
+            actions=self.actions,
             source_dir=self.plugins_dir,
         )
         core_api.host = self
@@ -229,6 +264,8 @@ class PluginHost:
             groups=self.groups,
             users=self.users,
             roles=self.roles,
+            warns=self.warns,
+            actions=self.actions,
             source_dir=source_dir,
         )
         api.host = self

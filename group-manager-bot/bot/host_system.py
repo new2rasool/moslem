@@ -53,17 +53,41 @@ def register_core(api: PluginAPI) -> None:
 
     async def cmd_plugins(ctx):
         lines = [api.tr(ctx.lang, "plugins_header", n=len(host.records))]
+        in_group = bool(ctx.chat_id and not ctx.is_private)
         for name in sorted(host.records):
             rec = host.records[name]
             if rec.failed:
                 lines.append(f"❌ {name} — {rec.error}")
             elif rec.enabled:
+                state = ""
+                if in_group:
+                    state = "🟢" if host.is_plugin_enabled(ctx.chat_id, name) else "🔴"
                 lines.append(
-                    f"✅ {name} v{rec.version}  |  {rec.commands} فرمان · "
+                    f"{state} {name} v{rec.version}  |  {rec.commands} فرمان · "
                     f"{rec.events} رویداد · {rec.callbacks} دکمه"
                 )
-        lines.append(f"Σ {len(registry.commands())} فرمان کل")
+        lines.append(api.tr(ctx.lang, "plugins_total", n=len(registry.commands())))
         ctx.respond("\n".join(lines))
+
+    async def cmd_plugin_group(ctx):
+        parts = ctx.args.split()
+        if len(parts) < 2:
+            ctx.respond(api.tr(ctx.lang, "plugin_group_usage"))
+            return
+        name, state = parts[0], parts[1].lower()
+        if name not in host.records:
+            ctx.respond(api.tr(ctx.lang, "plugin_not_found", name=name))
+            return
+        if state in ("on", "روشن", "1", "true"):
+            enabled = True
+        elif state in ("off", "خاموش", "0", "false"):
+            enabled = False
+        else:
+            ctx.respond(api.tr(ctx.lang, "plugin_group_usage"))
+            return
+        host.set_plugin_enabled(ctx.chat_id, name, enabled)
+        key = "plugin_ok_enabled" if enabled else "plugin_ok_disabled"
+        ctx.respond(api.tr(ctx.lang, key, name=name))
 
     async def cmd_plugin_manage(ctx):
         parts = ctx.args.split()
@@ -115,4 +139,12 @@ def register_core(api: PluginAPI) -> None:
         private_only=True,
         aliases=("plugin", "مدیریت پلاگین"),
         usage="plugin <list|load|unload|reload|reloadall> [name]",
+    )
+    api.register_command(
+        "pluginenable",
+        cmd_plugin_group,
+        level=AccessLevel.ADMIN,
+        group_only=True,
+        aliases=("pluginenable", "فعال‌سازی پلاگین"),
+        usage="pluginenable <name> <on|off>",
     )

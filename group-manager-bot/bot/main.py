@@ -23,7 +23,13 @@ from bot.logging_setup import get_logger, setup_logging
 from bot.plugin_host import PluginHost
 from bot.registry import Registry
 from bot.repositories.base import Group
-from bot.repositories.sqlite_repo import SqliteGroupRepo, SqliteRoleRepo, SqliteUserRepo
+from bot.repositories.sqlite_repo import (
+    SqliteActionRepo,
+    SqliteGroupRepo,
+    SqliteRoleRepo,
+    SqliteUserRepo,
+    SqliteWarnRepo,
+)
 from bot.services.access_service import AccessService
 
 log = get_logger("main")
@@ -49,6 +55,8 @@ def build_host(cfg: Config) -> tuple[PluginHost, Dispatcher]:
     groups = SqliteGroupRepo(db)
     users = SqliteUserRepo(db)
     roles = SqliteRoleRepo(db)
+    warns = SqliteWarnRepo(db)
+    actions = SqliteActionRepo(db)
     access = AccessService(roles, owner_id=cfg.owner_id, sudo_ids=cfg.sudo_ids)
     translator = Translator()
     registry = Registry()
@@ -63,9 +71,17 @@ def build_host(cfg: Config) -> tuple[PluginHost, Dispatcher]:
         groups=groups,
         users=users,
         roles=roles,
+        warns=warns,
+        actions=actions,
     )
     host.load_all()
-    dispatcher = Dispatcher(registry, access, translator, default_lang=cfg.default_lang)
+    dispatcher = Dispatcher(
+        registry,
+        access,
+        translator,
+        default_lang=cfg.default_lang,
+        plugin_enabled=host.is_plugin_enabled,
+    )
     return host, dispatcher
 
 
