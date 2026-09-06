@@ -65,6 +65,13 @@ plugins/<name>/plugin.py   ← قابلیت (قرارداد: PLUGIN_VERSION + re
 | `lookup` | `lookup` | کارت تشخیص کاربر (نقش/اخطار/سابقه/گبن) |
 | `newcomer_guard` | `newcomer/newcomermin` | سکوت تازه‌واردان تا N دقیقه |
 | `globalguard` | `ggadd/ggdel/gglist` | کلمات ممنوع سراسری (SUDO) |
+| `security` | `security` | پنل امنیت: وضعیت + سوییچ ۱۱ محافظت |
+| `reportops` | `handle` | رسیدگیٔ دکمه‌ای به گزارش‌ها (warn/kick/ban/ignore) |
+| `announcer` | `announce/announces/announcedel` | اعلان‌های دوره‌ای خودکار |
+| `trivia` | `quiz/answer/score` | مسابقهٔ گروهی با امتیاز و سؤال خودکار |
+| `capsguard` | `capsguard/setcaps` | ضد حروف بزرگ و نویسهٔ تکراری |
+| `reminder` | `remind/reminders/rmremind` | یادآور شخصی به چت خصوصی |
+| `status` | `status` | داشبورد فنی ربات (uptime/آمار) |
 
 فرمان‌های خود هسته (بدون پلاگین): `/start`، `/help` (فهرست پویا)، `/plugins`،
 `/plugin load|unload|reload|reloadall` (سودو، پیوی) و
@@ -76,7 +83,7 @@ plugins/<name>/plugin.py   ← قابلیت (قرارداد: PLUGIN_VERSION + re
 # بررسی سلامت + کشف خودکار پلاگین‌ها (بدون تلگرام/توکن)
 python3 -m bot.main --check
 
-# تست‌ها (۲۱۵ تست — منطق ناب، بدون تلگرام)
+# تست‌ها (۲۲۶ تست — منطق ناب، بدون تلگرام)
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 make test
 
@@ -136,7 +143,7 @@ bot/
 ├── db/  cache/  i18n/ config.py  logging_setup.py
 └── handlers/base.py   # ابزار چک دسترسی (برای آداپتورها)
 plugins/               # ← همهٔ قابلیت‌ها این‌جا (کشف خودکار)
-tests/                 # ۲۱۵ تست (unit + پلاگین + E2E بدون تلگرام)
+tests/                 # ۲۲۶ تست (unit + پلاگین + E2E بدون تلگرام)
 ```
 
 ## 🛣 وضعیت و قدم‌های بعدی

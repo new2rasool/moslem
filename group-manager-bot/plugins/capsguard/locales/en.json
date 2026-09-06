@@ -1,0 +1,11 @@
+{
+  "on": "on",
+  "off": "off",
+  "status": "🔠 Caps/repeat guard: {state}\nmin latin letters: {latin} | repeat threshold: {run}",
+  "enabled": "✅ Caps & repeated-character guard enabled.",
+  "disabled": "🔴 Caps & repeated-character guard disabled.",
+  "usage": "📎 Usage: capsguard <on|off>",
+  "usage_set": "📎 Usage: setcaps <min_latin 3-30> <min_run 3-20>",
+  "set_ok": "✅ Set: latin >= {latin} at 75%% ratio | run >= {run}",
+  "warn": "🔠 {user}, please don't type in ALL CAPS or repeated characters."
+}

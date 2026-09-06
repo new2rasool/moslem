@@ -1,0 +1,9 @@
+{
+  "no_storage": "⚠️ Audit ledger unavailable.",
+  "none": "📭 No reports to handle.",
+  "item": "📮 Report #{id}\n🎯 User: {target}\n📝 {reason}  [{at}]",
+  "staff_only": "🔒 Only admins can handle reports.",
+  "already": "ℹ️ This report was already handled.",
+  "ignored": "✅ Report #{id} (user {target}) ignored.",
+  "done": "✅ Report #{id}: user {target} {what}."
+}

@@ -1,0 +1,8 @@
+{
+  "title": "📊 Bot status:",
+  "uptime": "Uptime: {up}",
+  "plugins": "{n} plugins loaded",
+  "commands": "{n} commands · {events} events · {callbacks} buttons",
+  "today": "Actions recorded today in this group: {n}",
+  "plugins_list": "Plugins: {names}"
+}
