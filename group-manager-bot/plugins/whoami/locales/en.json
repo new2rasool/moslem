@@ -1,0 +1,7 @@
+{
+  "whoami_out": "👤 Name: {name}\n🆔 ID: {id}\n📛 Username: {username}\n{group_line}🎖 Access level: {level}\n",
+  "group_line": "👥 Group: {chat} ({chat_id})\n",
+  "anonymous": "Anonymous",
+  "your_id": "🆔 Your ID: {id}",
+  "chat_id": "🆔 This group's ID: {id}"
+}

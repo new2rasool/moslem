@@ -1,0 +1,18 @@
+{
+  "already_on": "ℹ️ A trivia game is already running.",
+  "started": "🎮 Trivia started!",
+  "stopped": "🔴 Trivia stopped (scores cleared).",
+  "not_running": "ℹ️ No trivia game is running.",
+  "still_open": "⏳ The current question is still open; wait until it's answered.",
+  "usage": "📎 Usage: quiz <on|off|next>",
+  "question_title": "Question {n}:",
+  "howto": "— answer: /answer <number> —",
+  "usage_answer": "📎 Usage: answer <1-4>",
+  "wait_next": "⏳ The next question is coming soon…",
+  "already_answered": "ℹ️ You already answered this question.",
+  "correct": "🎉 Well done {name}! Correct — +1 point (your total: {total}).",
+  "wrong": "❌ Wrong. Try again!",
+  "timeout_reveal": "⏰ No one answered. Correct answer: {answer}",
+  "no_scores": "📭 No scores yet.",
+  "score_header": "🏆 Trivia scoreboard:"
+}

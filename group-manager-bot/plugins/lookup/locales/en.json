@@ -1,0 +1,12 @@
+{
+  "usage": "📎 Usage: lookup [id] — without id, your own card",
+  "no_storage": "⚠️ Warn/audit storage unavailable.",
+  "header": "🔍 User card {id}:",
+  "role": "Role",
+  "warns": "⚠️ Warns: {n}",
+  "last_reason": "Last reason",
+  "punish_history": "Recent punishment history",
+  "clean_history": "Clean history — no recent punish actions.",
+  "reports": "Reports filed against this user: {n}",
+  "gbanned": "On the global ban list (reason: {reason})"
+}

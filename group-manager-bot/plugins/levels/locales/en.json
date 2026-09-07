@@ -1,0 +1,16 @@
+{
+  "on": "on",
+  "off": "off",
+  "level_up": "🎉 Congratulations {name}! You reached level {level}!",
+  "no_xp_yet": "ℹ️ User {id} has no XP yet.",
+  "rank": "🏅 {name} (id: {id})\nLevel: {level} | XP: {xp}\nTo next level: {pct}% (need {need} XP)",
+  "empty": "📭 No XP earned yet.",
+  "top_header": "🏆 Top 10 in this group:",
+  "status": "🎮 Levels: {state} | XP cooldown: {cooldown}s",
+  "enabled": "✅ Levels enabled.",
+  "disabled": "🔴 Levels disabled.",
+  "usage": "📎 Usage: levels <on|off>",
+  "usage_cooldown": "📎 Usage: xpcooldown <0-3600 seconds>",
+  "cooldown_set": "✅ XP cooldown: {cooldown}s",
+  "reset": "✅ All XP in this group was reset."
+}

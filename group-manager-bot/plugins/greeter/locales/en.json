@@ -1,0 +1,17 @@
+{
+  "welcome_default": "🎉 Welcome to the group, {name}!\n👥 You are member #{id}.",
+  "goodbye_default": "👋 {name} left the group. See you!",
+  "on": "on",
+  "off": "off",
+  "status": "👋 Welcome: {state} | Goodbye: {gb}\n📝 Preview: {preview}",
+  "greet_enabled": "✅ Welcome message enabled.",
+  "greet_disabled": "🔴 Welcome message disabled.",
+  "greet_set": "✅ Welcome text saved. (vars: {name}, {username}, {chat}, {id})",
+  "goodbye_set": "✅ Goodbye text saved.",
+  "goodbye_on": "✅ Goodbye message enabled.",
+  "goodbye_off": "🔴 Goodbye message disabled.",
+  "usage": "📎 Usage: greet <on|off>",
+  "usage_goodbye": "📎 Usage: goodbye <on|off>",
+  "usage_setgreet": "📎 Usage: setgreet <text> — e.g. setgreet Welcome {name}!",
+  "usage_setgoodbye": "📎 Usage: setgoodbye <text>"
+}

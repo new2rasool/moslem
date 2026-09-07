@@ -1,0 +1,10 @@
+{
+  "too_short": "❌ Word must be at least {min} characters (after normalization).",
+  "already": "ℹ️ «{word}» is already on the global list.",
+  "added": "✅ «{word}» added to the global banned words (total: {n}).",
+  "not_found": "❌ «{word}» is not on the global list.",
+  "removed": "✅ «{word}» removed from the global list (total: {n}).",
+  "empty": "📭 The global banned-words list is empty.",
+  "header": "🌐 {n} globally banned words:",
+  "warn": "🚫 {user}, your message contained banned content (global list) and was deleted."
+}

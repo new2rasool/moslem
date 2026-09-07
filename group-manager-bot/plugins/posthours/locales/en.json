@@ -1,0 +1,9 @@
+{
+  "on": "on",
+  "off": "off",
+  "status": "⏰ Posting hours: {state} | allowed: {rng}",
+  "disabled": "🔴 Posting-hours restriction disabled.",
+  "enabled": "✅ Posting hours enabled: regular members may post only between {start} and {end}.",
+  "usage": "📎 Usage: posthours <HH:MM-HH:MM> or <off> (midnight-spanning supported)",
+  "blocked": "⏰ Posting is not allowed at this hour; only between {start} and {end}."
+}

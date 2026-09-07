@@ -1,0 +1,5 @@
+{
+  "usage": "📎 کاربرد: `duration <مدت>`  —  مثل: duration 1d6h30m",
+  "invalid": "❌ «{raw}» مدت نامعتبر است.\nواحدها: s، m، h، d، w — ترکیب مجاز است: 1d6h30m",
+  "result": "⏱ «{raw}» = {seconds} ثانیه\n(نمایش: {human})"
+}

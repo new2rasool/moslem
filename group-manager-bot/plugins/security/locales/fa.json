@@ -1,0 +1,10 @@
+{
+  "on": "روشن",
+  "off": "خاموش",
+  "group_only": "🔒 این فرمان فقط در گروه کار می‌کند.",
+  "header": "🛡 وضعیت محافظت‌های گروه:",
+  "hint": "— برای تغییر: security <نام> <on|off> —",
+  "unknown": "❌ نام نامعتبر. نام‌های مجاز: {names}",
+  "toggled": "✅ {label}: {state}",
+  "single": "{label}: {state}"
+}

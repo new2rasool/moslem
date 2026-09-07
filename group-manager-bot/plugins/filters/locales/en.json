@@ -1,0 +1,13 @@
+{
+  "on": "on",
+  "off": "off",
+  "usage": "📎 Usage: addfilter <keyword> => <reply>",
+  "added": "✅ Filter «{trigger}» added (total: {total}).",
+  "removed": "✅ Filter «{trigger}» removed (total: {total}).",
+  "not_found": "❌ No filter found for keyword «{trigger}».",
+  "header": "🎯 Auto-reply filters — {state} ({n}):",
+  "empty": "No filters defined yet.",
+  "enabled": "✅ Auto-reply filters enabled.",
+  "disabled": "🔴 Auto-reply filters disabled.",
+  "usage_onoff": "📎 Usage: filterson <on|off>"
+}

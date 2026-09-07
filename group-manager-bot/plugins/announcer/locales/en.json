@@ -1,0 +1,12 @@
+{
+  "usage": "📎 Usage: announce <interval in minutes> | <text>",
+  "bad_interval": "❌ Interval must be between {mn} and {mx} minutes.",
+  "bad_text": "❌ Announcement text must be 1-{max} characters.",
+  "added": "✅ Announcement #{id} added (every {minutes} min).",
+  "empty": "📭 No periodic announcements defined.",
+  "header": "📢 {n} active periodic announcements:",
+  "usage_del": "📎 Usage: announcedel <id>",
+  "not_found": "❌ Announcement #{id} not found.",
+  "deleted": "✅ Announcement #{id} deleted.",
+  "cleared": "✅ All periodic announcements cleared."
+}

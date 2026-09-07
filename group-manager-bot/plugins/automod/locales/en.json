@@ -1,0 +1,11 @@
+{
+  "on": "on",
+  "off": "off",
+  "status": "🤖 AutoMod: {state}\nrepeat kicks → ban: {kick} | repeated mutes → ban: {mute}",
+  "enabled": "✅ AutoMod enabled (suspicious patterns get auto-banned).",
+  "disabled": "🔴 AutoMod disabled.",
+  "usage": "📎 Usage: automod <on|off>",
+  "usage_set": "📎 Usage: automodset <kick_ban 1-6> <mute_ban 1-10>",
+  "set_ok": "✅ Set: {kick} repeat kicks → ban | {mute} repeated mutes → ban",
+  "reason": "🛡 {target} auto-banned for repeated behaviour ({action})."
+}

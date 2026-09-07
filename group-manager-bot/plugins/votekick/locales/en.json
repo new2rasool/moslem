@@ -1,0 +1,17 @@
+{
+  "usage": "📎 Usage: votekick <id> [reason]",
+  "no_self": "❌ You cannot start a votekick against yourself.",
+  "staff_target": "🔒 You cannot votekick admins/staff.",
+  "already_running": "ℹ️ A votekick is already running; wait for it to finish.",
+  "cooldown": "⏳ Wait {s}s between votekicks.",
+  "proposed": "🗳 Votekick to remove user {user} started.\nReason: {reason}\n(deadline: 2 min — one vote per member)",
+  "finished": "ℹ️ This votekick has ended.",
+  "no_vote": "🔒 The target or the initiator cannot vote.",
+  "staff_no_vote": "🔒 Admins/staff do not vote.",
+  "already_voted": "ℹ️ You already voted.",
+  "voted": "✅ Vote recorded. (yes: {yes} | no: {no})",
+  "usage_min": "📎 Usage: setvotekick <quorum 2-20>",
+  "min_set": "✅ Quorum of yes votes to remove: {n}",
+  "result_pass": "🗳 Votekick for user {user} passed: remove ({yes} yes vs {no} no).",
+  "result_fail": "🗳 Votekick for user {user} failed ({yes} yes vs {no} no; quorum {need})."
+}

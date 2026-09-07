@@ -1,0 +1,11 @@
+{
+  "on": "on",
+  "off": "off",
+  "status": "🎖 Auto-role: {state} | threshold: {threshold} messages → {role}",
+  "enabled": "✅ Auto-role enabled.",
+  "disabled": "🔴 Auto-role disabled (counters cleared).",
+  "usage": "📎 Usage: autorole <on|off>",
+  "usage_set": "📎 Usage: setautorole <threshold 5-1000> <mod|admin>",
+  "set_ok": "✅ Set: after {threshold} messages → role {role}",
+  "promoted": "🎖 {name}, thanks to your activity you were auto-promoted to {role}! Congrats!"
+}

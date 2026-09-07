@@ -1,0 +1,8 @@
+{
+  "no_reason": "no reason",
+  "set": "🌙 You're now away. {reason} — send any message to come back.",
+  "welcome_back": "👋 Welcome back, {name}! Your away status was removed.",
+  "removed_manual": "✅ Your away status was removed.",
+  "not_afk": "ℹ️ You're not away.",
+  "away": "🌙 {name} is away: {reason} (since {since})"
+}

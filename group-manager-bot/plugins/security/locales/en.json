@@ -1,0 +1,10 @@
+{
+  "on": "on",
+  "off": "off",
+  "group_only": "🔒 This command works in groups only.",
+  "header": "🛡 Group protection status:",
+  "hint": "— to change: security <name> <on|off> —",
+  "unknown": "❌ Unknown name. Allowed: {names}",
+  "toggled": "✅ {label}: {state}",
+  "single": "{label}: {state}"
+}

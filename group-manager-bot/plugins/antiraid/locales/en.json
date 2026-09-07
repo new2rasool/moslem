@@ -1,0 +1,16 @@
+{
+  "on": "on",
+  "off": "off",
+  "status": "🛡 Anti-raid: {state}\nthreshold: {count} joins / {window}s | lock for: {lock}s",
+  "enabled": "✅ Anti-raid enabled.",
+  "disabled": "🔴 Anti-raid disabled.",
+  "usage": "📎 Usage: antiraid <on|off>",
+  "usage_raid": "📎 Usage: raid <on|off> (manual emergency lock)",
+  "usage_set": "📎 Usage: raidset <count 2-50> <window 10-3600> <lock 10-86400>",
+  "set_ok": "✅ Set: {count} joins / {window}s → lock {lock}s",
+  "raid_detected": "🚨 Unusual join wave detected! Joins locked for {secs}s.",
+  "advice": "🛠 Admins: please review and ban suspicious users if needed.",
+  "raid_released": "🔓 Anti-raid lock expired; group is back to normal.",
+  "locked_manual": "🔒 Emergency lock enabled ({secs}s).",
+  "unlocked_manual": "🔓 Emergency lock removed."
+}

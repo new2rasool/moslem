@@ -1,0 +1,14 @@
+{
+  "on": "on",
+  "off": "off",
+  "usage_add": "📎 Usage: addblacklist <word|phrase ...>",
+  "usage_rm": "📎 Usage: rmblacklist <word ...>",
+  "added": "✅ {n} word(s) added (total: {total}).",
+  "removed": "✅ {n} word(s) removed (total: {total}).",
+  "header": "🚫 Blacklist filter — {state} | mode: {mode}",
+  "empty": "No words yet.",
+  "mode_delete": "✅ Mode: silent delete",
+  "mode_warn": "✅ Mode: delete + warn",
+  "usage_mode": "📎 Usage: blacklistmode <delete|warn>",
+  "warned": "⚠️ {user}: banned word («{word}»); message deleted."
+}

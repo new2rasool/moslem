@@ -1,0 +1,12 @@
+{
+  "usage": "📎 Usage: remind <minutes 1-10080> <text>",
+  "bad_min": "❌ Delay must be between {mn} and {mx} minutes.",
+  "bad_text": "❌ Reminder text must be 1-{max} characters.",
+  "set": "✅ Reminder #{id} set for {minutes} minutes: «{text}»",
+  "none": "📭 You have no active reminders.",
+  "header": "⏰ {n} of your active reminders:",
+  "in_min": "in {n} min",
+  "usage_del": "📎 Usage: rmremind <id>",
+  "not_found": "❌ Reminder #{id} not found.",
+  "deleted": "✅ Reminder #{id} deleted."
+}

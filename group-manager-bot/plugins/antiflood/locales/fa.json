@@ -1,0 +1,11 @@
+{
+  "on": "روشن",
+  "off": "خاموش",
+  "status": "🚦 ضد سیل: {state}\n📊 آستانه: {count} پیام در {window} ثانیه",
+  "enabled": "✅ ضد سیل روشن شد.",
+  "disabled": "🔴 ضد سیل خاموش شد.",
+  "usage": "📎 کاربرد: antiflood <on|off>",
+  "usage_set": "📎 کاربرد: setflood <count 1-30> <seconds 1-60>",
+  "set_ok": "✅ آستانهٔ ضد سیل: {count} پیام در {window} ثانیه",
+  "warning": "⚠️ کاربر {user_id} اسپم می‌فرستد! لطفاً آرام‌تر. (اقدام خودکار: سکوت موقت)"
+}

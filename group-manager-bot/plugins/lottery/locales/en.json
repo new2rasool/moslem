@@ -1,0 +1,15 @@
+{
+  "already": "ℹ️ A lottery is already running.",
+  "started": "🎉 Lottery started! Join with the button below:",
+  "none": "📭 No active lottery.",
+  "no_entries": "ℹ️ No one joined; cancelled.",
+  "winner": "🏆 Lottery winner: {name} (id: {user}) — out of {n} participants. Congrats! 🎊",
+  "cancelled": "❌ Lottery cancelled.",
+  "status_text": "🎟 Active lottery — {n} participants so far.",
+  "usage": "📎 Usage: lottery <start|end|cancel|status>",
+  "closed": "ℹ️ This lottery is closed/cancelled.",
+  "no_creator": "🔒 The host cannot join.",
+  "no_staff": "🔒 Admins cannot join.",
+  "already_in": "ℹ️ You already joined this lottery.",
+  "joined": "✅ Joined! (participants so far: {n})"
+}

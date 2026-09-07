@@ -1,0 +1,11 @@
+{
+  "usage": "📎 Usage: gban <id> <reason> | ungban <id>",
+  "no_owner": "⛔ You cannot globally ban the bot owner/sudo.",
+  "already": "ℹ️ User {user} is already on the global ban list.",
+  "done": "🌐 User {user} added to the global ban list.\nReason: {reason} — they will be banned instantly in any group they join.",
+  "not_in_list": "ℹ️ User {user} is not on the global ban list.",
+  "removed": "✅ User {user} removed from the global ban list.",
+  "empty": "📭 The global ban list is empty.",
+  "header": "🌐 {n} users on the global ban list:",
+  "join_denied": "🚫 User {user} is globally banned and cannot join."
+}

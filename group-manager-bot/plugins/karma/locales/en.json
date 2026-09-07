@@ -1,0 +1,14 @@
+{
+  "usage": "📎 Usage: karma <id> (or reply to their message)",
+  "no_self": "ℹ️ You have no karma yet. Thank others with «karma <id>».",
+  "self_score": "⭐ Your karma: {n}",
+  "no_self_target": "❌ You cannot give karma to yourself.",
+  "staff_target": "🔒 Karma cannot be given to admins/staff.",
+  "staff_giver": "🔒 Admins/staff do not give karma.",
+  "cooldown": "⏳ Wait {s}s between thanks.",
+  "already": "ℹ️ You already gave karma to this user in the last 24h.",
+  "gave": "✅ +1 karma to {name} ({user}) — total: {n}",
+  "empty": "ℹ️ No karma recorded yet.",
+  "top_header": "🏆 Group top:",
+  "reset": "🗑 All karma in this group was reset."
+}

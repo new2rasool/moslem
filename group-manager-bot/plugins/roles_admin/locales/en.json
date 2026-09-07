@@ -1,0 +1,13 @@
+{
+  "err_no_target": "⚠️ Reply to a user's message or provide a numeric ID.",
+  "usage_promote": "📎 Usage: promote <mod|admin|co_owner> <@user|id> (or reply)",
+  "no_self": "⛔ You cannot promote/demote yourself.",
+  "cannot_touch_owner": "🛡️ The group owner cannot be changed by you.",
+  "denied_hierarchy": "⛔ Your access level is too low for this promotion.",
+  "denied_target_not_lower": "⛔ You cannot change someone at your level or above.",
+  "promoted": "🎖 {target} promoted to «{role}».",
+  "demoted": "📉 {target} demoted (was: {prev}).",
+  "not_an_admin": "ℹ️ This user has no bot role in the group.",
+  "empty": "No bot-role admins registered in this group.",
+  "header": "🎖 Group bot admins ({n}):"
+}

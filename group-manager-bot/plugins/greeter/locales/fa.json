@@ -1,0 +1,17 @@
+{
+  "welcome_default": "🎉 به گروه خوش آمدی {name}!\n👥 تو عضو شمارهٔ {id} هستی.",
+  "goodbye_default": "👋 {name} گروه را ترک کرد. به امید دیدار!",
+  "on": "روشن",
+  "off": "خاموش",
+  "status": "👋 خوش‌آمد: {state} | خداحافظی: {gb}\n📝 پیش‌نمایش: {preview}",
+  "greet_enabled": "✅ پیام خوش‌آمد روشن شد.",
+  "greet_disabled": "🔴 پیام خوش‌آمد خاموش شد.",
+  "greet_set": "✅ متن خوش‌آمد ذخیره شد. (متغیرها: {name}، {username}، {chat}، {id})",
+  "goodbye_set": "✅ متن خداحافظی ذخیره شد.",
+  "goodbye_on": "✅ پیام خداحافظی روشن شد.",
+  "goodbye_off": "🔴 پیام خداحافظی خاموش شد.",
+  "usage": "📎 کاربرد: greet <on|off>",
+  "usage_goodbye": "📎 کاربرد: goodbye <on|off>",
+  "usage_setgreet": "📎 کاربرد: setgreet <متن> — مثل: setgreet خوش آمدی {name} عزیز!",
+  "usage_setgoodbye": "📎 کاربرد: setgoodbye <متن>"
+}
