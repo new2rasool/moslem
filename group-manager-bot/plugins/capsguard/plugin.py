@@ -85,7 +85,8 @@ def register(api) -> None:
             return
         now = time.monotonic()
         warn_key = (chat_id, user_id)
-        if now - _last_warn.get(warn_key, 0.0) >= WARN_COOLDOWN_S:
+        last = _last_warn.get(warn_key)
+        if last is None or now - last >= WARN_COOLDOWN_S:
             _last_warn[warn_key] = now
             ctx.act("delete_message", user_id=user_id, reason="caps")
             ctx.respond(api.tr(ctx.lang, "warn", user=user_id))

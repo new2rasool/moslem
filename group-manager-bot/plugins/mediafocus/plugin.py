@@ -64,7 +64,8 @@ def register(api) -> None:
         ctx.act("delete_message", user_id=user_id, reason="mediafocus")
         key = (chat_id, user_id)
         now = time.monotonic()
-        if now - _last_warn.get(key, 0.0) >= WARN_COOLDOWN_S:
+        last = _last_warn.get(key)
+        if last is None or now - last >= WARN_COOLDOWN_S:
             _last_warn[key] = now
             if is_media:
                 ctx.respond(api.tr(ctx.lang, "warn_caption"))

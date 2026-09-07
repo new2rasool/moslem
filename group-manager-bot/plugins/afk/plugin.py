@@ -65,7 +65,10 @@ def register(api) -> None:
                 continue
             now = time.monotonic()
             nkey = (user_id, uid)
-            if now - _notified.get(nkey, 0.0) < NOTIFY_COOLDOWN_S:
+            last = _notified.get(nkey)
+            # فقط اگر در همین پنجره قبلاً اعلان داده شده رد کن (سیستم‌های کم‌آپتایم
+            # با پیش‌فرض صفر اشتباه می‌شدند)
+            if last is not None and now - last < NOTIFY_COOLDOWN_S:
                 break
             _notified[nkey] = now
             ctx.respond(api.tr(ctx.lang, "away", name=rec["name"],

@@ -65,7 +65,8 @@ def register(api) -> None:
             return
         # حذف رسانهٔ جدید + هشدار (محدود)
         ctx.act("delete_message", user_id=user_id, reason="mediaflood")
-        if now - _last_warn.get(key, 0.0) >= WARN_COOLDOWN_S:
+        last = _last_warn.get(key)
+        if last is None or now - last >= WARN_COOLDOWN_S:
             _last_warn[key] = now
             ctx.respond(api.tr(ctx.lang, "warn", user=user_id, limit=limit))
 

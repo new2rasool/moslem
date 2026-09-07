@@ -74,7 +74,8 @@ def register(api) -> None:
         # ضد حلقه: بین دو اقدام خودکار روی یک هدف فاصله بگذار
         now = time.monotonic()
         key = (chat_id, target)
-        if now - _last_act.get(key, 0.0) < _ACT_COOLDOWN_S:
+        last = _last_act.get(key)
+        if last is not None and now - last < _ACT_COOLDOWN_S:
             return
         _last_act[key] = now
 

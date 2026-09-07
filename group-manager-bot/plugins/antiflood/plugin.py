@@ -89,7 +89,8 @@ def register(api) -> None:
         bucket.append(now)
         if len(bucket) > limit:
             # جلوگیری از هشدار تکراری: هر ۱۰ ثانیه یک بار
-            if now - _last_notice.get(key, 0.0) > 10.0:
+            last = _last_notice.get(key)
+            if last is None or now - last > 10.0:
                 _last_notice[key] = now
                 ctx.respond(api.tr(ctx.lang, "warning", user_id=user_id))
             bucket.popleft()  # شمارنده را در حد مجاز نگه دار

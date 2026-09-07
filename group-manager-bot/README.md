@@ -108,24 +108,66 @@ plugins/<name>/plugin.py   ← قابلیت (قرارداد: PLUGIN_VERSION + re
 - مستند کامل: [`docs/group-manager/21-advanced8-plugins.md`](../docs/group-manager/21-advanced8-plugins.md)
   و [`docs/group-manager/22-telegram-live-binding.md`](../docs/group-manager/22-telegram-live-binding.md).
 
-## ▶️ اجرا
+## ⚙️ نصب و اجرا / Installation
+
+### 🇮🇷 فارسی
+
+**نصب خودکار (یک دستور):** از داخل همین پوشه اجرا کنید:
 
 ```bash
-# بررسی سلامت + کشف خودکار پلاگین‌ها (بدون تلگرام/توکن)
-python3 -m bot.main --check
-
-# تست‌ها (۲۵۰ تست — منطق ناب + اتصال تلگرام با کلاینت جعلی، بدون اینترنت)
-python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
-make test
-
-# اجرای واقعی (اتصال کامل به تلگرام — همهٔ پلاگین‌ها)
-# متغیرهای محیط: BOT_TOKEN + API_ID + API_HASH + OWNER_ID (از .env هم می‌توان
-# با `set -a; source .env; set +a` خواند) — pyrogram اختیاری نصب می‌شود:
-.venv/bin/pip install -e ".[run]" pyrogram
-export BOT_TOKEN=… API_ID=… API_HASH=… OWNER_ID=…
-python3 -m bot.main --run
-python3 -m bot.main --run --watch   # + هات‌ری‌لود پوشهٔ plugins
+./install.sh               # نصب خودکار کامل (venv + وابستگی‌ها + .env + بررسی)
+./install.sh --no-dev      # فقط وابستگی‌های اجرا (حجم کمتر)
 ```
+
+کاری که می‌کند: ساخت `.venv` ← نصب `pip install -e ".[run,dev]"` (Pyrogram +
+pytest) ← ساخت `.env` از روی `.env.example` (اگر نیست) ← ساخت پوشهٔ `data/` ←
+بررسی سلامت `python -m bot.main --check`.
+
+**نصب دستی (قدم‌به‌قدم):**
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[run,dev]"             # اجرا + تست (یا فقط ".[run]")
+cp .env.example .env                    # سپس مقادیر واقعی را وارد کنید:
+nano .env                               # BOT_TOKEN + API_ID + API_HASH + OWNER_ID
+python3 -m bot.main --check             # بررسی سلامت (۵۱ پلاگین / ۱۳۲ فرمان)
+python3 -m bot.main --run               # اجرای زنده
+python3 -m bot.main --run --watch       # + هات‌ری‌لود پلاگین‌ها
+```
+
+اجرای همیشگی: `./run.sh --run --watch` (فایل `.env` را خودکار بارگذاری می‌کند).
+تست‌ها: `make test` یا `python3 -m pytest -q` (۲۵۰ تست سبز).
+
+### English
+
+**Automatic install (one command)** — from inside this folder:
+
+```bash
+./install.sh               # full auto install (venv + deps + .env + check)
+./install.sh --no-dev      # runtime dependencies only (smaller)
+```
+
+It creates `.venv`, runs `pip install -e ".[run,dev]"` (Pyrogram + pytest),
+creates `.env` from `.env.example` if missing, creates the `data/` folder and
+runs the health check `python -m bot.main --check`.
+
+**Manual install (step by step):**
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[run,dev]"             # runtime + tests (or ".[run]" only)
+cp .env.example .env                    # then fill in real values:
+nano .env                               # BOT_TOKEN + API_ID + API_HASH + OWNER_ID
+python3 -m bot.main --check             # health check (51 plugins / 132 commands)
+python3 -m bot.main --run               # live run
+python3 -m bot.main --run --watch       # + auto hot-reload of plugins
+```
+
+Everyday run: `./run.sh --run --watch` (it loads `.env` for you). Tests:
+`make test` or `python3 -m pytest -q` (250 green tests).
+
+> راهنمای کامل دوزبانه: [`docs/group-manager/24-installation.md`](../docs/group-manager/24-installation.md)
+> · Full bilingual guide: [`docs/group-manager/24-installation.md`](../docs/group-manager/24-installation.md)
 
 ## 🧩 افزودن یک پلاگین جدید (۳۰ ثانیه)
 
@@ -178,7 +220,7 @@ bot/
 ├── db/  cache/  i18n/ config.py  logging_setup.py
 └── handlers/base.py   # ابزار چک دسترسی (برای آداپتورها)
 plugins/               # ← همهٔ قابلیت‌ها این‌جا (کشف خودکار)
-tests/                 # ۲۲۶ تست (unit + پلاگین + E2E بدون تلگرام)
+tests/                 # ۲۵۰ تست (unit + پلاگین + E2E بدون تلگرام)
 ```
 
 ## 🛣 وضعیت و قدم‌های بعدی
@@ -189,7 +231,8 @@ tests/                 # ۲۲۶ تست (unit + پلاگین + E2E بدون تل�
 
 ## 📚 مستندات مرتبط
 
-- [`docs/group-manager/`](../docs/group-manager/README.md) — کتابخانهٔ کامل مشخصات (۱۳ سند)
+- [`docs/group-manager/`](../docs/group-manager/README.md) — کتابخانهٔ کامل مشخصات (ماژول‌های ۰۱ تا ۲۴)
+- [`docs/group-manager/24-installation.md`](../docs/group-manager/24-installation.md) — نصب خودکار/دستی (فارسی + انگلیسی)
 - `docs/group-manager/11-development-workflow.md` — فرایند توسعه (چرا این‌گونه ساختیم)
 - `docs/group-manager/12-plugin-architecture.md` — قرارداد و جزئیات پلاگین‌ها
 - `docs/group-manager/13-advanced-plugins.md` — پلاگین‌های پیشرفتهٔ پیاده‌سازی‌شده

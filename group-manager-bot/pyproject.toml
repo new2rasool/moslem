@@ -24,7 +24,7 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["bot", "bot.i18n", "bot.domain", "bot.services", "bot.repositories", "bot.db", "bot.cache", "bot.handlers"]
+packages = ["bot", "bot.i18n", "bot.domain", "bot.services", "bot.repositories", "bot.db", "bot.cache", "bot.handlers", "bot.adapter"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

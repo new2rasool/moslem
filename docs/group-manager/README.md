@@ -52,6 +52,7 @@
 | `21-advanced8-plugins.md` | هفت پلاگین با جزئیات کامل (سوم) | votekick، lottery، digest، autorole، mediaflood، nameguard، backup |
 | `22-telegram-live-binding.md` | اتصال زنده به تلگرام | آداپتور (models/connector/pyrogram)، ۱۳۲ فرمان، دکمه‌ها، اکشن‌های فیزیکی، کانال لاگ |
 | `23-advanced9-plugins.md` | هفت پلاگین با جزئیات کامل (چهارم) | faq، joinlog، safemode، botprotect، karma، timednote، mediafocus |
+| `24-installation.md` | نصب و اجرا (دوزبانه) | نصب خودکار `install.sh` + دستی قدم‌به‌قدم، ساخت `.env`، اجرا، تست |
 
 هر فایل مستقل است و میتوانید مستقیم از این فهرست وارد موضوع دلخواه شوید.
 
