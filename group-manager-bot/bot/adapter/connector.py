@@ -100,11 +100,19 @@ class TelegramConnector:
 
     # ── رسیدگی به آپدیت‌ها (از لایهٔ Pyrogram صدا زده می‌شوند) ───────
     async def handle_message(self, msg: IncomingMessage) -> None:
-        """پیام معمولی (گروه/خصوصی): فرمان یا رویداد message."""
-        chat_id = None if msg.chat.is_private else msg.chat.id
+        """پیام معمولی (گروه/خصوصی): فرمان یا رویداد message.
+
+        دو شناسهٔ مجزا:
+          - scope_chat: برای دیسپچر/پلاگین‌ها (چت خصوصی = None چون «گروه» نیست)
+          - send_chat:  مقصدِ واقعی ارسال پاسخ (همیشه شناسهٔ همان چت)
+        باگِ قبلی: پاسخ به scope_chat می‌رفت؛ در چت خصوصی (None) ارسال بی‌صدا
+        می‌شکست و ربات به دکمهٔ Start هیچ واکنشی نشان نمی‌داد.
+        """
+        scope_chat = None if msg.chat.is_private else msg.chat.id
+        send_chat = int(msg.chat.id or 0)
         self._current_message_id = msg.id
-        self._current_chat_id = chat_id
-        lang = self._lang(chat_id)
+        self._current_chat_id = send_chat
+        lang = self._lang(scope_chat)
         text = msg.text or ""
         user = msg.user
 
@@ -113,7 +121,7 @@ class TelegramConnector:
             if text.strip():
                 sends = await self.dispatcher.try_dispatch_command(
                     text,
-                    chat_id=chat_id,
+                    chat_id=scope_chat,
                     user_id=user.id if user else 0,
                     is_private=msg.chat.is_private,
                     lang=lang,
@@ -124,10 +132,10 @@ class TelegramConnector:
                 )
                 if sends is not None:
                     # پیام یک فرمان بود → پاسخ + اکشن‌ها + دکمهٔ احتمالی
-                    await self._dispatch_output(sends, chat_id,
+                    await self._dispatch_output(sends, send_chat,
                                                 msg.reply_to_message_id,
                                                 prev_keyboard)
-                    await self._run_actions(chat_id)
+                    await self._run_actions(send_chat)
                     await self._flush()
                     return
 
@@ -147,7 +155,7 @@ class TelegramConnector:
                 data["forward_from_chat_id"] = msg.forward_from_chat_id
             sends = await self.dispatcher.dispatch_event(
                 "message",
-                chat_id=chat_id,
+                chat_id=scope_chat,
                 lang=lang,
                 user_id=user.id if user else None,
                 user_name=user.name if user else "",
@@ -155,23 +163,24 @@ class TelegramConnector:
                 data=data,
             )
             if sends:
-                await self._dispatch_output(sends, chat_id, None, prev_keyboard)
-            await self._run_actions(chat_id)
+                await self._dispatch_output(sends, send_chat, None, prev_keyboard)
+            await self._run_actions(send_chat)
             await self._flush()
         finally:
             self._current_message_id = None
 
     async def handle_service(self, msg: IncomingMessage) -> None:
         """پیام سرویس: ورود/خروج عضو."""
-        chat_id = None if msg.chat.is_private else msg.chat.id
-        lang = self._lang(chat_id)
+        scope_chat = None if msg.chat.is_private else msg.chat.id
+        send_chat = int(msg.chat.id or 0)
+        lang = self._lang(scope_chat)
         title = msg.chat.title or ""
         prev_keyboard = getattr(self.dispatcher, "last_keyboard", None)
         if msg.service == "new_members":
             for member in msg.service_users:
                 sends = await self.dispatcher.dispatch_event(
                     "member_joined",
-                    chat_id=chat_id,
+                    chat_id=scope_chat,
                     lang=lang,
                     user_id=member.id,
                     user_name=member.name,
@@ -184,13 +193,13 @@ class TelegramConnector:
                           "member_count": len(msg.service_users)},
                 )
                 if sends:
-                    await self._dispatch_output(sends, chat_id, None,
+                    await self._dispatch_output(sends, send_chat, None,
                                                 prev_keyboard)
         elif msg.service == "left_member" and msg.service_user is not None:
             member = msg.service_user
             sends = await self.dispatcher.dispatch_event(
                 "member_left",
-                chat_id=chat_id,
+                chat_id=scope_chat,
                 lang=lang,
                 user_id=member.id,
                 user_name=member.name,
@@ -201,25 +210,26 @@ class TelegramConnector:
                       "chat_title": title},
             )
             if sends:
-                await self._dispatch_output(sends, chat_id, None, prev_keyboard)
-        await self._run_actions(chat_id)
+                await self._dispatch_output(sends, send_chat, None, prev_keyboard)
+        await self._run_actions(send_chat)
         await self._flush()
 
     async def handle_callback(self, cb: IncomingCallback) -> None:
-        chat_id = None if cb.chat.is_private else cb.chat.id
-        lang = self._lang(chat_id)
+        scope_chat = None if cb.chat.is_private else cb.chat.id
+        send_chat = int(cb.chat.id or 0)
+        lang = self._lang(scope_chat)
         prev_keyboard = getattr(self.dispatcher, "last_keyboard", None)
         user = cb.user
         sends = await self.dispatcher.dispatch_callback(
-            cb.data, chat_id=chat_id,
+            cb.data, chat_id=scope_chat,
             user_id=user.id if user else 0,
             lang=lang,
             sender_name=user.name if user else "",
             sender_username=user.username if user else "",
         )
-        await self._run_actions(chat_id)
+        await self._run_actions(send_chat)
         if sends:
-            await self._dispatch_output(sends, chat_id, None, prev_keyboard)
+            await self._dispatch_output(sends, send_chat, None, prev_keyboard)
         if cb.user is not None and cb.id:
             try:
                 await self.client.answer_callback(cb.id, text="")

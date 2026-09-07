@@ -100,6 +100,61 @@ async def test_command_reply_is_sent(e2e):
     assert client.sends[0][0] == CHAT and "قوانین" in client.sends[0][1]
 
 
+# ═══ دکمهٔ Start در چت خصوصی → پاسخ به همان چت ──────────────────────
+@pytest.mark.asyncio
+async def test_private_start_replies_to_user_chat(e2e):
+    """بازتولید باگ: پاسخ به chat_id=None می‌رفت و ربات «واکنش نشان نمی‌داد»."""
+    host, d, *_ = e2e
+    _, _, _, _, client, conn = _conn(e2e)
+    private_id = 987654321
+    msg = IncomingMessage(
+        id=11,
+        chat=IncomingChat(id=private_id, is_private=True),
+        user=IncomingUser(id=USER1, first_name="علی"),
+        text="/start",
+    )
+    await conn.handle_message(msg)
+    assert client.sends, "پاسخی برای /start ارسال نشد"
+    chat_id, text, *_ = client.sends[0]
+    # پاسخ باید به چتِ واقعی کاربر برود، نه None
+    assert chat_id == private_id
+    assert "سلام" in text or "ربات" in text
+
+
+@pytest.mark.asyncio
+async def test_private_help_replies_to_user_chat(e2e):
+    host, d, *_ = e2e
+    _, _, _, _, client, conn = _conn(e2e)
+    private_id = 987654322
+    msg = IncomingMessage(
+        id=12,
+        chat=IncomingChat(id=private_id, is_private=True),
+        user=IncomingUser(id=USER1, first_name="علی"),
+        text="/help",
+    )
+    await conn.handle_message(msg)
+    assert client.sends
+    assert client.sends[0][0] == private_id
+
+
+@pytest.mark.asyncio
+async def test_private_plain_message_no_crash(e2e):
+    """پیام عادی در چت خصوصی نباید به None ارسال شود (و کرش نکند)."""
+    host, d, *_ = e2e
+    _, _, _, _, client, conn = _conn(e2e)
+    private_id = 987654323
+    msg = IncomingMessage(
+        id=13,
+        chat=IncomingChat(id=private_id, is_private=True),
+        user=IncomingUser(id=USER1, first_name="علی"),
+        text="سلام ربات جان",
+    )
+    await conn.handle_message(msg)
+    # ممکن است هیچ پاسخی نباشد، ولی اگر باشد باید به چتِ واقعی برود
+    for chat_id, *_ in client.sends:
+        assert chat_id == private_id
+
+
 # ═══ اکشن فیزیکی حذف (capsguard) ────────────────────────────────────
 @pytest.mark.asyncio
 async def test_physical_delete_via_event(e2e):
